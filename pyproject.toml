@@ -1,18 +1,24 @@
 [build-system]
-build-backend = "setuptools.build_meta"
-requires = ["setuptools"]
+build-backend = 'setuptools.build_meta'
+requires = ['setuptools']
 
 [project]
-name = "apscheduler-webui"
-version = "0.0.1"
-dependencies = []
+name = 'apscheduler-webui'
+version = '0.0.1'
+dependencies = [
+    'apscheduler',
+    'fastapi',
+    'fastui',
+    'feishubot2',
+    'loguru',
+    'uvicorn',
+]
+
 [[project.authors]]
-name = "Dragon-GCS"
-email = "878173121@qq.com"
+name = 'Dragon-GCS'
+email = '878173121@qq.com'
 
 [project.optional-dependencies]
 dev = []
-
 [tool.setuptools]
-packages = ["apscheduler-webui"]
-
+packages = ['apscheduler-webui']
