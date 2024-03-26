@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Annotated
 
 from apscheduler.job import Job
-from apscheduler.triggers.cron import BaseField, CronTrigger
+from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from pydantic import BaseModel, Field, model_validator
@@ -90,7 +90,7 @@ class TriggerDate(BaseModel):
 class JobInfo(JobBase):
     id: Annotated[str, Field(title="ID")]
     name: Annotated[str, Field(title="Name")]
-    next_run_time: Annotated[datetime.datetime, Field(title="Next Run")]
+    next_run_time: Annotated[datetime.datetime | None, Field(title="Next Run")]
     executor: Annotated[str, Field(title="Executor")]
     job_store: Annotated[str, Field(title="Job Store")]
     trigger: Annotated[str, Field(title="Trigger")]
