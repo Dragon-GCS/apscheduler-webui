@@ -1,3 +1,5 @@
+from importlib import import_module
+
 from fastapi import APIRouter
 from fastui.forms import SelectSearchResponse
 
@@ -28,3 +30,16 @@ def get_executors() -> SelectSearchResponse:
         for name, executor in scheduler._executors.items()
     ]
     return SelectSearchResponse(options=executors)  # type: ignore
+
+
+@router.get("/available-job-stores", description="Get available job stores")
+def get_available_job_stores() -> SelectSearchResponse:
+    stores = [{"value": "Memory", "label": "Memory"}]
+    for store in ["MongoDB", "Redis", "SqlAlchemy"]:
+        try:
+            import_module(f"apscheduler.jobstores.{store.lower()}")
+            stores.append({"value": store, "label": f"{store}JobStore"})
+        except ImportError as e:
+            print(e)
+
+    return SelectSearchResponse(options=stores)  # type: ignore

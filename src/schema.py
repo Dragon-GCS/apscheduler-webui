@@ -1,17 +1,15 @@
 import datetime
 import json
 from typing import Annotated, Literal, TypeAlias
+from uuid import uuid4
 
 from apscheduler.job import Job
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
-from pydantic import (
-    BaseModel,
-    Field,
-    PlainSerializer,
-    model_validator,
-)
+from fastapi import HTTPException
+from pydantic import BaseModel, Field, PlainSerializer, model_validator
+from pydantic.json_schema import SkipJsonSchema
 
 from .scheduler import scheduler
 
@@ -82,7 +80,9 @@ class TriggerParam(BaseModel):
             raise ValueError(f"Invalid trigger: {trigger}(type: {type(trigger)}")
         return trigger_param
 
-    def get_trigger(self, trigger: Literal["Cron", "Date", "Interval"]) -> AllTrigger:
+    def get_trigger(
+        self, trigger: Literal["Cron", "Date", "Interval"], next_run_time: datetime.datetime
+    ) -> AllTrigger:
         if trigger == "Cron":
             return CronTrigger(
                 year=self.year,
@@ -98,10 +98,8 @@ class TriggerParam(BaseModel):
             )
         elif trigger == "Date":
             params = {
-                k: int(v)
-                for k, v in self.model_dump(
-                    exclude_none=True, include={"year", "month", "day", "hour", "minute", "second"}
-                )
+                k: int(getattr(self, k) or getattr(next_run_time, k))
+                for k in ("year", "month", "day", "hour", "minute", "second")
             }
             return DateTrigger(run_date=datetime.datetime(**params))  # type: ignore
         elif trigger == "Interval":
@@ -124,13 +122,12 @@ class JobInfo(BaseModel):
     next_run_time: Annotated[
         datetime.datetime | None, Field(title="Next Run"), PlainSerializer(format_date)
     ]
-    executor: Annotated[
-        str | None,
-        Field(None, title="Executor", json_schema_extra={"search_url": "/api/executors"}),
-    ]
-    job_store: Annotated[
-        str | None,
-        Field(None, title="Job Store", json_schema_extra={"search_url": "/api/job-stores"}),
+    executor: SkipJsonSchema[Annotated[str | None, Field(None, title="Executor")]]
+    jobstore: SkipJsonSchema[
+        Annotated[
+            str | None,
+            Field(None, title="Job Store", json_schema_extra={"search_url": "/api/job-stores"}),
+        ]
     ]
     trigger: Annotated[Literal["Cron", "Date", "Interval"], Field(title="Trigger")]
     trigger_params: Annotated[TriggerParam, Field(title="Trigger Params")]
@@ -155,7 +152,7 @@ class JobInfo(BaseModel):
 
         job_store = job._jobstore_alias
         job_store_class = scheduler._jobstores[job_store].__class__
-        data["job_store"] = f"{job_store_class.__name__}({job_store})"
+        data["jobstore"] = f"{job_store_class.__name__}({job_store})"
 
         data["func"] = f"{job.func.__module__}.{job.func.__qualname__}"
         data["args"] = json.dumps(job.args)
@@ -167,8 +164,7 @@ class JobInfo(BaseModel):
 
 class ModifyJobParam(BaseModel):
     name: Annotated[str, Field(title="Name")]
-    job_stores: Annotated[str | None, Field(None, title="Job Stores")]
-    executor: Annotated[str | None, Field(None, title="Executor")]
+    next_run_time: Annotated[datetime.datetime, Field(None, title="Next Run")]
     trigger: Annotated[Literal["Cron", "Date", "Interval"], Field(title="Trigger")]
     trigger_params: Annotated[TriggerParam, Field(title="Trigger Params")]
     args: Annotated[tuple, Field(tuple(), title="Arguments", description="List with json format")]
@@ -185,11 +181,101 @@ class ModifyJobParam(BaseModel):
         params["args"] = tuple(json.loads(params.get("args", "[]")))
         params["kwargs"] = dict(json.loads(params.get("kwargs", "{}")))
         params["coalesce"] = params["coalesce"] == "on"
-        params.setdefault("trigger_params", TriggerParam.model_validate({}))
+        params.setdefault("trigger_params", TriggerParam())  # type: ignore
         return params
 
     def get_trigger(self):
         trigger_params = self.trigger_params.model_dump(exclude_none=True)
         if not trigger_params:
             return
-        return self.trigger_params.get_trigger(self.trigger)
+        return self.trigger_params.get_trigger(self.trigger, self.next_run_time)
+
+
+class NewJobParam(ModifyJobParam):
+    id: Annotated[str, Field(default_factory=lambda: uuid4().hex, title="ID")]
+    executor: Annotated[
+        str | None,
+        Field(None, title="Executor", json_schema_extra={"search_url": "/api/executors"}),
+    ]
+    jobstore: Annotated[
+        str, Field(title="Job Store", json_schema_extra={"search_url": "/api/job-stores"})
+    ]
+
+
+class JobStoreInfo(BaseModel):
+    alias: Annotated[str, Field(title="Alias")]
+    type_: Annotated[
+        str,
+        Field(
+            title="Store Type",
+            json_schema_extra={"search_url": "/api/available-job-stores"},
+            description="""SqlAlchemy: string of url. 
+            MongoDB: {"host": uri, "database": "database", "collection": "collection" }.
+            Redis: {"host": "host", "port": port, "db": db}""",
+        ),
+    ]
+    detail: Annotated[str, Field(title="Detail")]
+
+    @model_validator(mode="before")
+    @classmethod
+    def parse_job_store(cls, job_store: dict) -> dict:
+        if "store" not in job_store:
+            return job_store
+        store = job_store.pop("store")
+        type_ = store.__class__.__name__.removesuffix("JobStore")
+        if type_ == "Memory":
+            job_store["detail"] = ""
+        elif type_ == "SqlAlchemy":
+            job_store["detail"] = store.url
+        elif type_ == "MongoDB":
+            collection = store.collection
+            database = collection._Collection__database
+            client = database.client
+            try:
+                from pymongo.errors import InvalidOperation
+
+                _Exception = InvalidOperation
+            except ImportError:
+                _Exception = Exception
+            try:
+                uri = ":".join(map(str, client.address))
+            except _Exception:
+                uri = ",".join(":".join(map(str, client.nodes)))
+            job_store["detail"] = json.dumps(
+                {
+                    "host": uri,
+                    "database": database._Database__name,
+                    "collection": collection._Collection__name,
+                }
+            )
+        elif type_ == "Redis":
+            pool_kwargs = store.redis.connection_pool.connection_kwargs
+            job_store["detail"] = json.dumps({k: pool_kwargs[k] for k in ("host", "port", "db")})
+        else:
+            raise ValueError(f"Invalid job store: {store}")
+        return {"type_": type_, **job_store}
+
+    def get_store(self):
+        try:
+            if self.type_ == "Memory":
+                from apscheduler.jobstores.memory import MemoryJobStore
+
+                return MemoryJobStore()
+            elif self.type_ == "SqlAlchemy":
+                from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+
+                return SQLAlchemyJobStore(url=self.detail)
+            elif self.type_ == "MongoDB":
+                from apscheduler.jobstores.mongodb import MongoDBJobStore
+
+                kwargs = json.loads(self.detail)
+                return MongoDBJobStore(**kwargs)
+            elif self.type_ == "Redis":
+                from apscheduler.jobstores.redis import RedisJobStore
+
+                kwargs = json.loads(self.detail)
+                return RedisJobStore(**kwargs)
+            else:
+                raise ValueError(f"Invalid job store: {self.type_}")
+        except ImportError as e:
+            raise HTTPException(status_code=400, detail=e)

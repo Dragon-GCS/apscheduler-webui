@@ -19,6 +19,7 @@ async def jobs():
     jobs = scheduler.get_jobs()
 
     return frame_page(
+        c.Heading(text="Job"),
         c.Div(
             components=[
                 c.Button(
@@ -118,7 +119,6 @@ async def resume_job(id: str):
 
 @router.post("/modify/{id}", response_model=FastUI, response_model_exclude_none=True)
 async def modify_job(id: str, job_info: Annotated[ModifyJobParam, fastui_form(ModifyJobParam)]):
-    print(job_info)
     modify_kwargs = job_info.model_dump(exclude={"trigger", "trigger_params"})
     modify_kwargs["trigger"] = job_info.get_trigger()
     modify_kwargs = dict(filter(lambda x: x[1], modify_kwargs.items()))
