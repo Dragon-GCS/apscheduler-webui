@@ -1,6 +1,5 @@
 import datetime
 import json
-from calendar import week
 from typing import Annotated, Literal, TypeAlias
 
 from apscheduler.job import Job
@@ -186,6 +185,7 @@ class ModifyJobParam(BaseModel):
         params["args"] = tuple(json.loads(params.get("args", "[]")))
         params["kwargs"] = dict(json.loads(params.get("kwargs", "{}")))
         params["coalesce"] = params["coalesce"] == "on"
+        params.setdefault("trigger_params", TriggerParam.model_validate({}))
         return params
 
     def get_trigger(self):

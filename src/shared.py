@@ -61,3 +61,20 @@ def confirm_modal(
         ],
         open_trigger=PageEvent(name=modal_name),
     )
+
+
+def operate_finish():
+    return c.Modal(
+        title="Operation finish",
+        body=[
+            c.Button(text="OK", on_click=GoToEvent(url="/")),
+        ],
+        open_trigger=PageEvent(name="operate_finish"),
+    )
+
+
+def operate_result(clear_modal: str):
+    return [
+        c.FireEvent(event=PageEvent(name=clear_modal, clear=True)),
+        c.FireEvent(event=PageEvent(name="operate_finish")),
+    ]

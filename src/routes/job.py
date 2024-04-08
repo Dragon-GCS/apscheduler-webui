@@ -1,15 +1,15 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from fastui import FastUI
 from fastui import components as c
 from fastui.components.display import DisplayLookup
 from fastui.events import BackEvent, GoToEvent, PageEvent
+from fastui.forms import fastui_form
 
-from src.deps import parse_form
 from src.scheduler import scheduler
 from src.schema import JobInfo, ModifyJobParam
-from src.shared import confirm_modal, frame_page
+from src.shared import confirm_modal, frame_page, operate_finish, operate_result
 
 router = APIRouter(prefix="/job", tags=["job"])
 
@@ -26,13 +26,7 @@ async def jobs():
                     on_click=GoToEvent(url="/new"),
                     class_name="+ ms-2",
                     named_style="secondary",
-                ),
-                c.Button(
-                    text="Stop All",
-                    on_click=GoToEvent(url="/"),
-                    named_style="secondary",
-                    class_name="+ ms-2",
-                ),
+                )
             ],
             class_name="my-3",
         ),
@@ -102,25 +96,12 @@ async def job_detail(id: str):
                     submit_url=f"/job/remove/{id}",
                     submit_trigger_name="submit_remove_job",
                 ),
-                c.Modal(
-                    title="Operation finish",
-                    body=[
-                        c.Button(text="OK", on_click=GoToEvent(url="/")),
-                    ],
-                    open_trigger=PageEvent(name="operate_finish"),
-                ),
+                operate_finish(),
             ],
             class_name="d-flex flex-start gap-3 mb-3",
         ),
         c.Details(data=job_model),
     )
-
-
-def operate_result(clear_modal: str):
-    return [
-        c.FireEvent(event=PageEvent(name=clear_modal, clear=True)),
-        c.FireEvent(event=PageEvent(name="operate_finish")),
-    ]
 
 
 @router.post("/pause/{id}", response_model=FastUI, response_model_exclude_none=True)
@@ -136,9 +117,8 @@ async def resume_job(id: str):
 
 
 @router.post("/modify/{id}", response_model=FastUI, response_model_exclude_none=True)
-async def modify_job(
-    id: str, job_info: Annotated[ModifyJobParam, Depends(parse_form(ModifyJobParam))]
-):
+async def modify_job(id: str, job_info: Annotated[ModifyJobParam, fastui_form(ModifyJobParam)]):
+    print(job_info)
     modify_kwargs = job_info.model_dump(exclude={"trigger", "trigger_params"})
     modify_kwargs["trigger"] = job_info.get_trigger()
     modify_kwargs = dict(filter(lambda x: x[1], modify_kwargs.items()))
