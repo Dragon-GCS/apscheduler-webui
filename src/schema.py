@@ -1,8 +1,9 @@
 import datetime
 import json
 from typing import Annotated, Literal, TypeAlias
-from uuid import uuid4
 
+from apscheduler.executors.asyncio import AsyncIOExecutor
+from apscheduler.executors.pool import ProcessPoolExecutor, ThreadPoolExecutor
 from apscheduler.job import Job
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.date import DateTrigger
@@ -81,7 +82,7 @@ class TriggerParam(BaseModel):
         return trigger_param
 
     def get_trigger(
-        self, trigger: Literal["Cron", "Date", "Interval"], next_run_time: datetime.datetime
+        self, trigger: Literal["Cron", "Date", "Interval"], next_run_time: datetime.datetime | None
     ) -> AllTrigger:
         if trigger == "Cron":
             return CronTrigger(
@@ -98,7 +99,7 @@ class TriggerParam(BaseModel):
             )
         elif trigger == "Date":
             params = {
-                k: int(getattr(self, k) or getattr(next_run_time, k))
+                k: int(getattr(self, k, None) or getattr(next_run_time, k))
                 for k in ("year", "month", "day", "hour", "minute", "second")
             }
             return DateTrigger(run_date=datetime.datetime(**params))  # type: ignore
@@ -122,16 +123,23 @@ class JobInfo(BaseModel):
     next_run_time: Annotated[
         datetime.datetime | None, Field(title="Next Run"), PlainSerializer(format_date)
     ]
-    executor: SkipJsonSchema[Annotated[str | None, Field(None, title="Executor")]]
+    executor: Annotated[
+        str,
+        Field("default", title="Executor", json_schema_extra={"search_url": "/api/executors"}),
+    ]
     jobstore: SkipJsonSchema[
         Annotated[
-            str | None,
-            Field(None, title="Job Store", json_schema_extra={"search_url": "/api/job-stores"}),
+            str,
+            Field(
+                "default", title="Job Store", json_schema_extra={"search_url": "/api/job-stores"}
+            ),
         ]
     ]
     trigger: Annotated[Literal["Cron", "Date", "Interval"], Field(title="Trigger")]
     trigger_params: Annotated[TriggerParam, Field(title="Trigger Params")]
-    func: Annotated[str, Field(title="Function")]
+    func: Annotated[
+        str, Field(title="Function", description="String parsed by 'scheduler.add_job'.")
+    ]
     args: Annotated[
         str, Field(default="[]", title="Arguments", description="List with json format")
     ]
@@ -139,12 +147,12 @@ class JobInfo(BaseModel):
         str, Field(default="{}", title="Keyword Arguments", description="Dict with json format")
     ]
     coalesce: Annotated[bool, Field(default=True, title="Coalesce")]
-    max_instances: Annotated[int, Field(title="Max Instances")]
-    misfire_grace_time: Annotated[int | None, Field(title="Misfire Grace Time")]
+    max_instances: Annotated[int, Field(1, title="Max Instances")]
+    misfire_grace_time: Annotated[int | None, Field(None, title="Misfire Grace Time")]
 
     @model_validator(mode="before")
     @classmethod
-    def parse_job(cls, job: Job) -> dict:
+    def parse(cls, job: Job) -> dict:
         data = {name: getattr(job, name) for name in job.__slots__}
         executor = job.executor
         executor_class = scheduler._executors[executor].__class__
@@ -164,7 +172,7 @@ class JobInfo(BaseModel):
 
 class ModifyJobParam(BaseModel):
     name: Annotated[str, Field(title="Name")]
-    next_run_time: Annotated[datetime.datetime, Field(None, title="Next Run")]
+    next_run_time: Annotated[datetime.datetime | None, Field(None, title="Next Run")]
     trigger: Annotated[Literal["Cron", "Date", "Interval"], Field(title="Trigger")]
     trigger_params: Annotated[TriggerParam, Field(title="Trigger Params")]
     args: Annotated[tuple, Field(tuple(), title="Arguments", description="List with json format")]
@@ -172,12 +180,12 @@ class ModifyJobParam(BaseModel):
         dict, Field({}, title="Keyword Arguments", description="Dict with json format")
     ]
     coalesce: Annotated[bool, Field(True, title="Coalesce")]
-    max_instances: Annotated[int, Field(title="Max Instances")]
-    misfire_grace_time: Annotated[int, Field(title="Misfire Grace Time")]
+    max_instances: Annotated[int, Field(1, title="Max Instances")]
+    misfire_grace_time: Annotated[int | None, Field(None, title="Misfire Grace Time")]
 
     @model_validator(mode="before")
     @classmethod
-    def parse_params(cls, params: dict) -> dict:
+    def parse(cls, params: dict) -> dict:
         params["args"] = tuple(json.loads(params.get("args", "[]")))
         params["kwargs"] = dict(json.loads(params.get("kwargs", "{}")))
         params["coalesce"] = params["coalesce"] == "on"
@@ -191,15 +199,8 @@ class ModifyJobParam(BaseModel):
         return self.trigger_params.get_trigger(self.trigger, self.next_run_time)
 
 
-class NewJobParam(ModifyJobParam):
-    id: Annotated[str, Field(default_factory=lambda: uuid4().hex, title="ID")]
-    executor: Annotated[
-        str | None,
-        Field(None, title="Executor", json_schema_extra={"search_url": "/api/executors"}),
-    ]
-    jobstore: Annotated[
-        str, Field(title="Job Store", json_schema_extra={"search_url": "/api/job-stores"})
-    ]
+class NewJobParam(ModifyJobParam, JobInfo):  # type: ignore
+    pass
 
 
 class JobStoreInfo(BaseModel):
@@ -209,24 +210,30 @@ class JobStoreInfo(BaseModel):
         Field(
             title="Store Type",
             json_schema_extra={"search_url": "/api/available-job-stores"},
-            description="""SqlAlchemy: string of url. 
+        ),
+    ]
+    detail: Annotated[
+        str,
+        Field(
+            title="Detail",
+            description="""SqlAlchemy: string of url.
             MongoDB: {"host": uri, "database": "database", "collection": "collection" }.
             Redis: {"host": "host", "port": port, "db": db}""",
         ),
     ]
-    detail: Annotated[str, Field(title="Detail")]
 
     @model_validator(mode="before")
     @classmethod
-    def parse_job_store(cls, job_store: dict) -> dict:
+    def parse(cls, job_store: dict) -> dict:
+        # from post data
         if "store" not in job_store:
             return job_store
         store = job_store.pop("store")
         type_ = store.__class__.__name__.removesuffix("JobStore")
         if type_ == "Memory":
             job_store["detail"] = ""
-        elif type_ == "SqlAlchemy":
-            job_store["detail"] = store.url
+        elif type_ == "SQLAlchemy":
+            job_store["detail"] = str(store.engine.url)
         elif type_ == "MongoDB":
             collection = store.collection
             database = collection._Collection__database
@@ -261,7 +268,7 @@ class JobStoreInfo(BaseModel):
                 from apscheduler.jobstores.memory import MemoryJobStore
 
                 return MemoryJobStore()
-            elif self.type_ == "SqlAlchemy":
+            elif self.type_ == "SQLAlchemy":
                 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 
                 return SQLAlchemyJobStore(url=self.detail)
@@ -279,3 +286,35 @@ class JobStoreInfo(BaseModel):
                 raise ValueError(f"Invalid job store: {self.type_}")
         except ImportError as e:
             raise HTTPException(status_code=400, detail=e)
+
+
+class ExecutorInfo(BaseModel):
+    alias: Annotated[str, Field(title="Alias")]
+    type_: Annotated[Literal["Asyncio", "ThreadPool", "ProcessPool"], Field(title="Executor Type")]
+    max_worker: Annotated[int | None, Field(None, title="Max Worker")]
+
+    @model_validator(mode="before")
+    @classmethod
+    def parse(cls, executor_info: dict) -> dict:
+        if "executor" not in executor_info:
+            return executor_info
+        executor = executor_info.pop("executor")
+        if isinstance(executor, AsyncIOExecutor):
+            executor_info["type_"] = "Asyncio"
+        else:
+            executor_info["type_"] = executor.__class__.__name__.removesuffix("Executor")
+            executor_info["max_worker"] = executor._pool._max_workers
+        return executor_info
+
+    def get_executor(self):
+        if self.type_ == "Asyncio":
+            return AsyncIOExecutor()
+        kwargs = {}
+        if self.max_worker is not None:
+            kwargs["max_workers"] = self.max_worker
+        if self.type_ == "ThreadPool":
+            return ThreadPoolExecutor(**kwargs)
+        elif self.type_ == "ProcessPool":
+            return ProcessPoolExecutor(**kwargs)
+        else:
+            raise ValueError(f"Executor type {self.type_} not supported")

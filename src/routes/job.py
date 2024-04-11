@@ -1,4 +1,5 @@
 from typing import Annotated
+from uuid import uuid4
 
 from fastapi import APIRouter
 from fastui import FastUI
@@ -8,7 +9,7 @@ from fastui.events import BackEvent, GoToEvent, PageEvent
 from fastui.forms import fastui_form
 
 from src.scheduler import scheduler
-from src.schema import JobInfo, ModifyJobParam
+from src.schema import JobInfo, ModifyJobParam, NewJobParam
 from src.shared import confirm_modal, frame_page, operate_finish, operate_result
 
 router = APIRouter(prefix="/job", tags=["job"])
@@ -103,6 +104,36 @@ async def job_detail(id: str):
         ),
         c.Details(data=job_model),
     )
+
+
+@router.get("/new", response_model=FastUI, response_model_exclude_none=True)
+async def create_job():
+    return frame_page(
+        c.Link(components=[c.Text(text="Back")], on_click=BackEvent()),
+        c.Heading(text="Create Job"),
+        c.ModelForm(
+            display_mode="page", submit_url="/job/new", model=JobInfo, initial={"id": uuid4().hex}
+        ),
+    )
+
+
+@router.post("/new", response_model=FastUI, response_model_exclude_none=True)
+async def new_job(job_info: Annotated[NewJobParam, fastui_form(NewJobParam)]):
+    trigger = job_info.get_trigger()
+    scheduler.add_job(
+        job_info.func,
+        trigger=trigger,
+        args=job_info.args,
+        kwargs=job_info.kwargs,
+        coalesce=job_info.coalesce,
+        max_instances=job_info.max_instances,
+        misfire_grace_time=job_info.misfire_grace_time,
+        name=job_info.name,
+        id=job_info.id,
+        executor=job_info.executor,
+        jobstore=job_info.jobstore,
+    )
+    return [c.FireEvent(event=GoToEvent(url="/"))]
 
 
 @router.post("/pause/{id}", response_model=FastUI, response_model_exclude_none=True)

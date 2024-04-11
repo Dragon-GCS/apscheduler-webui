@@ -20,6 +20,10 @@ name = 'Dragon-GCS'
 email = '878173121@qq.com'
 
 [project.optional-dependencies]
-dev = []
+dev = [
+    'pymongo',
+    'redis',
+    'sqlalchemy',
+]
 [tool.setuptools]
 packages = ['apscheduler-webui']

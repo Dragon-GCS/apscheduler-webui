@@ -5,70 +5,70 @@ from fastui import FastUI
 from fastui import components as c
 from fastui.components.display import DisplayLookup
 from fastui.components.forms import FormFieldInput
-from fastui.events import PageEvent
+from fastui.events import GoToEvent, PageEvent
 from fastui.forms import fastui_form
 
 from ..scheduler import scheduler
-from ..schema import JobStoreInfo
+from ..schema import ExecutorInfo
 from ..shared import frame_page, operate_finish, operate_result
 
-router = APIRouter(prefix="/job/store", tags=["job_store"])
+router = APIRouter(prefix="/job/executor", tags=["executor"])
 
 
 @router.get("", response_model=FastUI, response_model_exclude_none=True)
 def store():
     job_stores = [
-        JobStoreInfo.model_validate({"alias": alias, "store": store})
-        for alias, store in scheduler._jobstores.items()
+        ExecutorInfo.model_validate({"alias": alias, "executor": executor})
+        for alias, executor in scheduler._executors.items()
     ]
 
     return frame_page(
-        c.Heading(text="Store"),
+        c.Heading(text="Executor"),
         c.Div(
             components=[
                 c.Button(
-                    text="New Store",
-                    on_click=PageEvent(name="new_store"),
+                    text="New Executor",
+                    on_click=PageEvent(name="new_executor"),
                     class_name="+ ms-2",
                     named_style="secondary",
                 ),
                 c.Button(
-                    text="Remove Store",
-                    on_click=PageEvent(name="remove_store"),
+                    text="Remove Executor",
+                    on_click=PageEvent(name="remove_executor"),
                     class_name="+ ms-2",
                     named_style="warning",
                 ),
                 c.Modal(
-                    title="Remove Job Store",
+                    title="Remove Executor",
                     body=[
                         c.Form(
                             form_fields=[
                                 FormFieldInput(name="alias", title="Alias", required=True)
                             ],
-                            submit_url="/job/store/remove",
+                            submit_url="/job/executor/remove",
                         )
                     ],
-                    open_trigger=PageEvent(name="remove_store"),
+                    open_trigger=PageEvent(name="remove_executor"),
                 ),
             ],
             class_name="my-3",
         ),
         c.Modal(
-            title="New Job Store",
+            title="New Job Executor",
             body=[
                 c.ModelForm(
-                    submit_url="/job/store/new",
-                    model=JobStoreInfo,
+                    submit_url="/job/executor/new",
+                    model=ExecutorInfo,
                 )
             ],
-            open_trigger=PageEvent(name="new_store"),
+            open_trigger=PageEvent(name="new_executor"),
         ),
         c.Table(
             data=job_stores,
             columns=[
                 DisplayLookup(field="alias", table_width_percent=20),
                 DisplayLookup(field="type_", table_width_percent=20),
-                DisplayLookup(field="detail"),
+                DisplayLookup(field="max_worker"),
             ],
         ),
         operate_finish(),
@@ -76,14 +76,15 @@ def store():
 
 
 @router.post("/new")
-async def new_job_store(new_store: Annotated[JobStoreInfo, fastui_form(JobStoreInfo)]):
-    job_store = new_store.get_store()
-    scheduler.add_jobstore(job_store, alias=new_store.alias)
-    return operate_result("new_store")
+async def new_executor(new_executor: Annotated[ExecutorInfo, fastui_form(ExecutorInfo)]):
+    executor = new_executor.get_executor()
+    print(new_executor)
+    scheduler.add_executor(executor, alias=new_executor.alias)
+    return operate_result("new_executor")
 
 
 @router.post("/remove")
-async def remove_job_store(alias: str = Form()):
+async def remove_executor(alias: str = Form()):
     if alias != "default":
-        scheduler.remove_jobstore(alias)
-    return operate_result("remove_store")
+        scheduler.remove_executor(alias)
+    return operate_result("remove_executor")
