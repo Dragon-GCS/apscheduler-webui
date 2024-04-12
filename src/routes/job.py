@@ -22,15 +22,8 @@ async def jobs():
     return frame_page(
         c.Heading(text="Job"),
         c.Div(
-            components=[
-                c.Button(
-                    text="New Job",
-                    on_click=GoToEvent(url="/new"),
-                    class_name="+ ms-2",
-                    named_style="secondary",
-                )
-            ],
-            class_name="my-3",
+            components=[c.Button(text="New Job", on_click=GoToEvent(url="/new"))],
+            class_name="d-flex flex-start gap-3 mb-3",
         ),
         c.Table(
             data=[JobInfo.model_validate(job) for job in jobs],
@@ -48,32 +41,19 @@ async def jobs():
 @router.get("/detail/{id}", response_model=FastUI, response_model_exclude_none=True)
 async def job_detail(id: str):
     job = scheduler.get_job(id)
-    assert job
     job_model = JobInfo.model_validate(job)
     return frame_page(
         c.Link(components=[c.Text(text="Back")], on_click=BackEvent()),
         c.Heading(text="Job Detail"),
         c.Div(
             components=[
-                c.Button(
-                    text="Pause",
-                    on_click=PageEvent(name="pause_job"),
-                ),
+                c.Button(text="Pause", on_click=PageEvent(name="pause_job")),
                 confirm_modal(
-                    title="Pause Job",
-                    modal_name="pause_job",
-                    submit_url=f"/job/pause/{id}",
-                    submit_trigger_name="submit_pause_job",
+                    title="Pause Job", modal_name="pause_job", submit_url=f"/job/pause/{id}"
                 ),
-                c.Button(
-                    text="Resume",
-                    on_click=PageEvent(name="resume_job"),
-                ),
+                c.Button(text="Resume", on_click=PageEvent(name="resume_job")),
                 confirm_modal(
-                    title="Pause Job",
-                    modal_name="resume_job",
-                    submit_url=f"/job/resume/{id}",
-                    submit_trigger_name="submit_resume_job",
+                    title="Resume Job", modal_name="resume_job", submit_url=f"/job/resume/{id}"
                 ),
                 c.Button(text="Modify", on_click=PageEvent(name="modify_job")),
                 c.Modal(
@@ -88,15 +68,10 @@ async def job_detail(id: str):
                     open_trigger=PageEvent(name="modify_job"),
                 ),
                 c.Button(
-                    text="Remove",
-                    named_style="warning",
-                    on_click=PageEvent(name="remove_job"),
+                    text="Remove", named_style="warning", on_click=PageEvent(name="remove_job")
                 ),
                 confirm_modal(
-                    title=f"Remove Job {id}?",
-                    modal_name="remove_job",
-                    submit_url=f"/job/remove/{id}",
-                    submit_trigger_name="submit_remove_job",
+                    title="Remove Job?", modal_name="remove_job", submit_url=f"/job/remove/{id}"
                 ),
                 operate_finish(),
             ],

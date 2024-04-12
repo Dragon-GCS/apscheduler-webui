@@ -26,9 +26,7 @@ def frame_page(*components: AnyComponent) -> list[AnyComponent]:
     ]
 
 
-def confirm_modal(
-    title: str, modal_name: str, submit_url: str, submit_trigger_name: str
-) -> c.Modal:
+def confirm_modal(title: str, modal_name: str, submit_url: str) -> c.Modal:
     """
     Create a modal with a confirm button and a cancel button. The modal is opened by the
     `modal_name` event and the submit button is triggered by the `submit_trigger_name` event.
@@ -37,10 +35,10 @@ def confirm_modal(
         title (str): The title of the modal.
         modal_name (str): The name of the event that opens the modal.
         submit_url (str): The URL to submit the form to.
-        submit_trigger_name (str): The name of the event that triggers the form submission.
     Returns:
         c.Modal: The modal component.
     """
+    submit_trigger_name = f"_trigger_{submit_url}"
     return c.Modal(
         title=title,
         body=[

@@ -98,10 +98,11 @@ class TriggerParam(BaseModel):
                 end_date=self.end_date,
             )
         elif trigger == "Date":
-            params = {
-                k: int(getattr(self, k, None) or getattr(next_run_time, k))
-                for k in ("year", "month", "day", "hour", "minute", "second")
-            }
+            keys = ("year", "month", "day", "hour", "minute", "second")
+            params = {}
+            if next_run_time is not None:
+                params.update(getattr(next_run_time, k) for k in keys if hasattr(next_run_time, k))
+            params.update({k: int(getattr(self, k)) for k in keys if hasattr(self, k)})
             return DateTrigger(run_date=datetime.datetime(**params))  # type: ignore
         elif trigger == "Interval":
             return IntervalTrigger(

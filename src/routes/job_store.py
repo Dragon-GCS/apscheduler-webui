@@ -26,16 +26,15 @@ def store():
         c.Heading(text="Store"),
         c.Div(
             components=[
-                c.Button(
-                    text="New Store",
-                    on_click=PageEvent(name="new_store"),
-                    class_name="+ ms-2",
-                    named_style="secondary",
+                c.Button(text="New Store", on_click=PageEvent(name="new_store")),
+                c.Modal(
+                    title="New Store",
+                    body=[c.ModelForm(submit_url="/job/store/new", model=JobStoreInfo)],
+                    open_trigger=PageEvent(name="new_store"),
                 ),
                 c.Button(
                     text="Remove Store",
                     on_click=PageEvent(name="remove_store"),
-                    class_name="+ ms-2",
                     named_style="warning",
                 ),
                 c.Modal(
@@ -51,17 +50,7 @@ def store():
                     open_trigger=PageEvent(name="remove_store"),
                 ),
             ],
-            class_name="my-3",
-        ),
-        c.Modal(
-            title="New Job Store",
-            body=[
-                c.ModelForm(
-                    submit_url="/job/store/new",
-                    model=JobStoreInfo,
-                )
-            ],
-            open_trigger=PageEvent(name="new_store"),
+            class_name="d-flex flex-start gap-3 mb-3",
         ),
         c.Table(
             data=job_stores,

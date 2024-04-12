@@ -5,7 +5,7 @@ from fastui import FastUI
 from fastui import components as c
 from fastui.components.display import DisplayLookup
 from fastui.components.forms import FormFieldInput
-from fastui.events import GoToEvent, PageEvent
+from fastui.events import PageEvent
 from fastui.forms import fastui_form
 
 from ..scheduler import scheduler
@@ -26,16 +26,15 @@ def store():
         c.Heading(text="Executor"),
         c.Div(
             components=[
-                c.Button(
-                    text="New Executor",
-                    on_click=PageEvent(name="new_executor"),
-                    class_name="+ ms-2",
-                    named_style="secondary",
+                c.Button(text="New Executor", on_click=PageEvent(name="new_executor")),
+                c.Modal(
+                    title="New Job Executor",
+                    body=[c.ModelForm(submit_url="/job/executor/new", model=ExecutorInfo)],
+                    open_trigger=PageEvent(name="new_executor"),
                 ),
                 c.Button(
                     text="Remove Executor",
                     on_click=PageEvent(name="remove_executor"),
-                    class_name="+ ms-2",
                     named_style="warning",
                 ),
                 c.Modal(
@@ -51,17 +50,7 @@ def store():
                     open_trigger=PageEvent(name="remove_executor"),
                 ),
             ],
-            class_name="my-3",
-        ),
-        c.Modal(
-            title="New Job Executor",
-            body=[
-                c.ModelForm(
-                    submit_url="/job/executor/new",
-                    model=ExecutorInfo,
-                )
-            ],
-            open_trigger=PageEvent(name="new_executor"),
+            class_name="d-flex flex-start gap-3 mb-3",
         ),
         c.Table(
             data=job_stores,
@@ -78,7 +67,6 @@ def store():
 @router.post("/new")
 async def new_executor(new_executor: Annotated[ExecutorInfo, fastui_form(ExecutorInfo)]):
     executor = new_executor.get_executor()
-    print(new_executor)
     scheduler.add_executor(executor, alias=new_executor.alias)
     return operate_result("new_executor")
 
