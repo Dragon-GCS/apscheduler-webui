@@ -7,6 +7,7 @@ from fastui import prebuilt_html
 from src.routes.api import router as api_router
 from src.routes.executor import router as executor_router
 from src.routes.job import router as job_router
+from src.routes.job_log import router as log_router
 from src.routes.job_store import router as store_router
 from src.scheduler import scheduler
 
@@ -24,6 +25,7 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(job_router)
 app.include_router(executor_router)
 app.include_router(store_router)
+app.include_router(log_router)
 app.include_router(api_router)
 
 

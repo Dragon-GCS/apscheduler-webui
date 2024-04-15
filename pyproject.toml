@@ -9,7 +9,6 @@ dependencies = [
     'apscheduler',
     'fastapi',
     'fastui',
-    'feishubot2',
     'loguru',
     'python-multipart',
     'uvicorn',
@@ -26,4 +25,4 @@ dev = [
     'sqlalchemy',
 ]
 [tool.setuptools]
-packages = ['apscheduler-webui']
+packages = ['src']
