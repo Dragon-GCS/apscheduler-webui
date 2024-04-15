@@ -20,6 +20,11 @@ def frame_page(*components: AnyComponent) -> list[AnyComponent]:
                     on_click=GoToEvent(url="/executor"),
                     active="/executor",
                 ),
+                c.Link(
+                    components=[c.Text(text="Log")],
+                    on_click=GoToEvent(url="/log/jobs"),
+                    active="startswith:/log",
+                ),
             ],
         ),
         c.Page(components=list(components)),

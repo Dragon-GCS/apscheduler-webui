@@ -8,9 +8,9 @@ from fastui.components.display import DisplayLookup
 from fastui.events import BackEvent, GoToEvent, PageEvent
 from fastui.forms import fastui_form
 
-from src.scheduler import scheduler
-from src.schema import JobInfo, ModifyJobParam, NewJobParam
-from src.shared import confirm_modal, frame_page, operate_finish, operate_result
+from ..scheduler import scheduler
+from ..schema import JobInfo, ModifyJobParam, NewJobParam
+from ..shared import confirm_modal, frame_page, operate_finish, operate_result
 
 router = APIRouter(prefix="/job", tags=["job"])
 
@@ -27,6 +27,7 @@ async def jobs():
         ),
         c.Table(
             data=[JobInfo.model_validate(job) for job in jobs],
+            data_model=JobInfo,
             columns=[
                 DisplayLookup(field="id", on_click=GoToEvent(url="/detail/{id}")),
                 DisplayLookup(field="name"),

@@ -3,6 +3,7 @@ from importlib import import_module
 from fastapi import APIRouter
 from fastui.forms import SelectOption, SelectSearchResponse
 
+from ..config import LOG_PATH
 from ..scheduler import scheduler
 
 router = APIRouter(prefix="/api", tags=["job"])
@@ -37,3 +38,13 @@ def get_available_job_stores() -> SelectSearchResponse:
             print(e)
 
     return SelectSearchResponse(options=stores)
+
+
+@router.get("/available-logs", description="Get available log file")
+def get_available_job_logs(q: str = "") -> SelectSearchResponse:
+    logs = [
+        SelectOption(value=file.name, label=file.name)
+        for file in LOG_PATH.iterdir()
+        if file.suffix == ".log" and file.name.startswith("jobs") and q in file.name
+    ]
+    return SelectSearchResponse(options=logs)
