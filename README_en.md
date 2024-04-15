@@ -89,7 +89,8 @@ def your_func(...):
 
 ### View logs
 
-- You can use `loguru.logger` to record logs。
+- You can use `loguru.logger` to record logs, but must set format with `src.log.LOG_FORMAT`。
+- Use `src.log.server_log` without any config, log will save to `logs` folder with format can be parsed correctly.
 - Webui(`/log/jobs`) can check your logs which is start with `jobs` and saved in specified folder (default is `logs`, can be changed in `config.py`)
 
 ## License

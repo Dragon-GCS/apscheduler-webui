@@ -20,8 +20,8 @@ LOG_FORMAT = (
 )
 
 PARSE_PATTERN = (
-    r"\[(?P<pid>\d+)\s*\] (?P<time>[\d\s:-]+) \| "
-    r"(?P<level>\w+)\s*\| (?P<name>.*?):(?P<line>\d+)\s(?P<message>.*)\n"
+    r"\[\s*(?P<pid>\d+)\] (?P<time>[\d\s:-]+) \| "
+    r"(?P<level>\w+)\s*\| (?P<name>.*?):(?P<line>\d+)\s(?P<message>.*)\n?"
 )
 
 

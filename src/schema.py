@@ -10,7 +10,6 @@ from apscheduler.triggers.date import DateTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from fastapi import HTTPException
 from pydantic import BaseModel, Field, PlainSerializer, model_validator
-from pydantic.json_schema import SkipJsonSchema
 
 from .scheduler import scheduler
 
@@ -128,13 +127,9 @@ class JobInfo(BaseModel):
         str,
         Field("default", title="Executor", json_schema_extra={"search_url": "/api/executors"}),
     ]
-    jobstore: SkipJsonSchema[
-        Annotated[
-            str,
-            Field(
-                "default", title="Job Store", json_schema_extra={"search_url": "/api/job-stores"}
-            ),
-        ]
+    jobstore: Annotated[
+        str,
+        Field("default", title="Job Store", json_schema_extra={"search_url": "/api/job-stores"}),
     ]
     trigger: Annotated[Literal["Cron", "Date", "Interval"], Field(title="Trigger")]
     trigger_params: Annotated[TriggerParam, Field(title="Trigger Params")]

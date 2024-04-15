@@ -80,8 +80,9 @@ def your_func(...):
 
 ### 日志查看
 
-- 你可以直接使用`from loguru import logger`来记录日志。
 - webui(`/log/jobs`)可以查看日志目录(默认为`logs`，可以在`config.py`中配置)中所有`jobs`开头的日志
+- 你可以直接使用`loguru.logger`来记录日志，但是日志格式需要使用`src.log.LOG_FORMAT`
+- 使用`src.log:server_log`，无需配置即可正确解析。
 
 ## 许可证
 
