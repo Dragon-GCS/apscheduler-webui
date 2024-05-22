@@ -36,4 +36,6 @@ def index(path: str) -> HTMLResponse:
 
 
 if __name__ == "__main__":
-    print("Hello, world!")
+    import uvicorn
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -42,6 +42,8 @@ async def jobs():
 @router.get("/detail/{id}", response_model=FastUI, response_model_exclude_none=True)
 async def job_detail(id: str):
     job = scheduler.get_job(id)
+    if not job:
+        return [c.FireEvent(event=GoToEvent(url="/"))]
     job_model = JobInfo.model_validate(job)
     return frame_page(
         c.Link(components=[c.Text(text="Back")], on_click=BackEvent()),

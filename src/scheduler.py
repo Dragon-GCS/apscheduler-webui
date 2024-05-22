@@ -56,7 +56,8 @@ def listen_job_execution_event(
 
 def listen_job_submission_event(event: JobSubmissionEvent):
     job: Job | None = scheduler.get_job(event.job_id)
-    assert job
+    if not job:
+        return
     server_log.debug(f"Submit job: {job.name}[{event.job_id}], next run at {job.next_run_time}")
 
 
