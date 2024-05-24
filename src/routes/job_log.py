@@ -1,3 +1,4 @@
+from textwrap import dedent
 from typing import Literal
 
 from fastapi import APIRouter
@@ -15,13 +16,20 @@ from .api import get_available_job_logs
 router = APIRouter(prefix="/job/log", tags=["job_log"])
 
 
+def parse_log_message(text: str):
+    messages = text.strip().split("\n", 1)
+    if len(messages) > 1:
+        return f"{messages[0]}\n```\n{messages[1]}\n```"
+    return messages[0]
+
+
 def log_content_to_markdown(log_name: str | None, level: str):
     if not (log_name and (LOG_PATH / log_name).exists()):
         return "Log not found"
     contents = "\n\n".join(
         [
             f"**[{line['pid']}] {line['time']}** *{line['level']}* "
-            f"`{line['name']}:{line['line']}`: {line['message']}"
+            f"`{line['name']}:{line['line']}`: {parse_log_message(line['message'])}"
             for line in logger.parse(LOG_PATH / log_name, pattern=PARSE_PATTERN)
             if not level or level == line["level"].rstrip()
         ][::-1]
@@ -45,7 +53,7 @@ def get_log(kind: Literal["jobs", "scheduler"], log_file: str | None = None, lev
     if kind == "jobs":
         initial = None  # type: ignore
         if log_file is None:
-            initial: SelectOption = get_available_job_logs().options[-1]  # type: ignore
+            initial: SelectOption = get_available_job_logs().options[0]  # type: ignore
             log_file = initial["value"]
         filter_field.append(
             FormFieldSelectSearch(

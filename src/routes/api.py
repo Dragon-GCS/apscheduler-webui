@@ -44,7 +44,7 @@ def get_available_job_stores() -> SelectSearchResponse:
 def get_available_job_logs(q: str = "") -> SelectSearchResponse:
     logs = [
         SelectOption(value=file.name, label=file.name)
-        for file in LOG_PATH.iterdir()
+        for file in sorted(LOG_PATH.iterdir(), reverse=True)
         if file.suffix == ".log" and file.name.startswith("jobs") and q in file.name
     ]
     return SelectSearchResponse(options=logs)

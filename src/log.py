@@ -1,5 +1,6 @@
 # cspell: words autoinit
 import os
+import re
 import sys
 from typing import TYPE_CHECKING
 
@@ -19,9 +20,12 @@ LOG_FORMAT = (
     "<cyan>{name}:{line}</cyan>\t{message}"
 )
 
-PARSE_PATTERN = (
+
+PARSE_PATTERN = re.compile(
     r"\[\s*(?P<pid>\d+)\] (?P<time>[\d\s:-]+) \| "
-    r"(?P<level>\w+)\s*\| (?P<name>.*?):(?P<line>\d+)\s(?P<message>.*)\n?"
+    # (?=\n\[|\Z): message match until next line start or end
+    r"(?P<level>\w+)\s*\| (?P<name>.*?):(?P<line>\d+)\s(?P<message>.*?)(?=\n\[|\Z)",
+    flags=re.S,  # match multiple lines
 )
 
 
