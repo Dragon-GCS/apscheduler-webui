@@ -1,3 +1,4 @@
+from importlib import import_module, reload
 from typing import Annotated
 from uuid import uuid4
 
@@ -71,6 +72,12 @@ async def job_detail(id: str):
                     open_trigger=PageEvent(name="modify_job"),
                 ),
                 c.Button(
+                    text="Reload", named_style="warning", on_click=PageEvent(name="reload_job")
+                ),
+                confirm_modal(
+                    title="Reload Job", modal_name="reload_job", submit_url=f"/job/reload/{id}"
+                ),
+                c.Button(
                     text="Remove", named_style="warning", on_click=PageEvent(name="remove_job")
                 ),
                 confirm_modal(
@@ -138,6 +145,16 @@ async def modify_job(id: str, job_info: Annotated[ModifyJobParam, fastui_form(Mo
         c.Heading(text="Modify Job"),
         c.Text(text=f"Modify job {id}"),
     )
+
+
+@router.post("/reload/{id}", response_model=FastUI, response_model_exclude_none=True)
+async def reload_job(id: str):
+    job = scheduler.get_job(id)
+    assert job, "Job not found"
+
+    module = import_module(job.func.__module__)
+    reload(module)
+    return operate_result("reload_job")
 
 
 @router.post("/remove/{id}", response_model=FastUI, response_model_exclude_none=True)
