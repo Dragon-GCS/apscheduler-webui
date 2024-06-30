@@ -1,5 +1,5 @@
 from importlib import import_module, reload
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import uuid4
 
 from fastapi import APIRouter
@@ -11,7 +11,7 @@ from fastui.forms import fastui_form
 
 from ..scheduler import scheduler
 from ..schema import JobInfo, ModifyJobParam, NewJobParam
-from ..shared import confirm_modal, frame_page, operate_finish, operate_result
+from ..shared import confirm_modal, frame_page
 
 router = APIRouter(prefix="/job", tags=["job"])
 
@@ -23,8 +23,20 @@ async def jobs():
     return frame_page(
         c.Heading(text="Job"),
         c.Div(
-            components=[c.Button(text="New Job", on_click=GoToEvent(url="/new"))],
-            class_name="d-flex flex-start gap-3 mb-3",
+            components=[c.Button(text="New Job", on_click=PageEvent(name="new_job"))],
+            class_name="mb-3",
+        ),
+        c.Modal(
+            title="New Job",
+            open_trigger=PageEvent(name="new_job"),
+            body=[
+                c.ModelForm(
+                    submit_url="/job/",
+                    display_mode="default",
+                    model=JobInfo,
+                    initial={"id": uuid4().hex},
+                ),
+            ],
         ),
         c.Table(
             data=[JobInfo.model_validate(job) for job in jobs],
@@ -40,72 +52,10 @@ async def jobs():
     )
 
 
-@router.get("/detail/{id}", response_model=FastUI, response_model_exclude_none=True)
-async def job_detail(id: str):
-    job = scheduler.get_job(id)
-    if not job:
-        return [c.FireEvent(event=GoToEvent(url="/"))]
-    job_model = JobInfo.model_validate(job)
-    return frame_page(
-        c.Link(components=[c.Text(text="Back")], on_click=BackEvent()),
-        c.Heading(text="Job Detail"),
-        c.Div(
-            components=[
-                c.Button(text="Pause", on_click=PageEvent(name="pause_job")),
-                confirm_modal(
-                    title="Pause Job", modal_name="pause_job", submit_url=f"/job/pause/{id}"
-                ),
-                c.Button(text="Resume", on_click=PageEvent(name="resume_job")),
-                confirm_modal(
-                    title="Resume Job", modal_name="resume_job", submit_url=f"/job/resume/{id}"
-                ),
-                c.Button(text="Modify", on_click=PageEvent(name="modify_job")),
-                c.Modal(
-                    title="Modify Job",
-                    body=[
-                        c.ModelForm(
-                            submit_url=f"/job/modify/{id}",
-                            model=JobInfo,
-                            initial=job_model.model_dump(exclude_defaults=True),
-                        )
-                    ],
-                    open_trigger=PageEvent(name="modify_job"),
-                ),
-                c.Button(
-                    text="Reload", named_style="warning", on_click=PageEvent(name="reload_job")
-                ),
-                confirm_modal(
-                    title="Reload Job", modal_name="reload_job", submit_url=f"/job/reload/{id}"
-                ),
-                c.Button(
-                    text="Remove", named_style="warning", on_click=PageEvent(name="remove_job")
-                ),
-                confirm_modal(
-                    title="Remove Job?", modal_name="remove_job", submit_url=f"/job/remove/{id}"
-                ),
-                operate_finish(),
-            ],
-            class_name="d-flex flex-start gap-3 mb-3",
-        ),
-        c.Details(data=job_model),
-    )
-
-
-@router.get("/new", response_model=FastUI, response_model_exclude_none=True)
-async def create_job():
-    return frame_page(
-        c.Link(components=[c.Text(text="Back")], on_click=BackEvent()),
-        c.Heading(text="Create Job"),
-        c.ModelForm(
-            display_mode="page", submit_url="/job/new", model=JobInfo, initial={"id": uuid4().hex}
-        ),
-    )
-
-
-@router.post("/new", response_model=FastUI, response_model_exclude_none=True)
+@router.post("/", response_model=FastUI, response_model_exclude_none=True)
 async def new_job(job_info: Annotated[NewJobParam, fastui_form(NewJobParam)]):
     trigger = job_info.get_trigger()
-    scheduler.add_job(
+    job = scheduler.add_job(
         job_info.func,
         trigger=trigger,
         args=job_info.args,
@@ -118,19 +68,52 @@ async def new_job(job_info: Annotated[NewJobParam, fastui_form(NewJobParam)]):
         executor=job_info.executor,
         jobstore=job_info.jobstore,
     )
-    return [c.FireEvent(event=GoToEvent(url="/"))]
+    return [
+        c.Paragraph(text=f"Created new job(id={job.id})"),
+        # TODO: GotoEvent will not refresh the page
+        c.Button(text="Back Home", on_click=GoToEvent(url="/")),
+    ]
 
 
-@router.post("/pause/{id}", response_model=FastUI, response_model_exclude_none=True)
-async def pause_job(id: str):
-    scheduler.pause_job(id)
-    return operate_result("pause_job")
-
-
-@router.post("/resume/{id}", response_model=FastUI, response_model_exclude_none=True)
-async def resume_job(id: str):
-    scheduler.resume_job(id)
-    return operate_result("resume_job")
+@router.get("/detail/{id}", response_model=FastUI, response_model_exclude_none=True)
+async def job_detail(id: str):
+    job = scheduler.get_job(id)
+    if not job:
+        return [c.FireEvent(event=GoToEvent(url="/"))]
+    job_model = JobInfo.model_validate(job)
+    return frame_page(
+        c.Link(components=[c.Text(text="Back")], on_click=BackEvent()),
+        c.Heading(text="Job Detail"),
+        c.Div(
+            components=[
+                # confirm model will be triggered by the underscored title of the modal
+                c.Button(text="Pause", on_click=PageEvent(name="pause_job")),
+                confirm_modal(title="Pause Job", submit_url=f"/pause/{id}"),
+                c.Button(text="Resume", on_click=PageEvent(name="resume_job")),
+                confirm_modal(title="Resume Job", submit_url=f"/resume/{id}"),
+                c.Button(text="Modify", on_click=PageEvent(name="modify_job")),
+                c.Modal(
+                    title="Modify Job",
+                    body=[
+                        c.ModelForm(
+                            submit_url=f"/job/modify/{id}",
+                            model=JobInfo,
+                            initial=job_model.model_dump(exclude_defaults=True),
+                        )
+                    ],
+                    open_trigger=PageEvent(name="modify_job"),
+                ),
+                c.Button(text="Reload", on_click=PageEvent(name="reload_job")),
+                confirm_modal(title="Reload Job", submit_url=f"/reload/{id}"),
+                c.Button(
+                    text="Remove", on_click=PageEvent(name="remove_job"), named_style="warning"
+                ),
+                confirm_modal(title="Remove Job", submit_url=f"/remove/{id}"),
+            ],
+            class_name="d-flex flex-start gap-3 mb-3",
+        ),
+        c.Details(data=job_model),
+    )
 
 
 @router.post("/modify/{id}", response_model=FastUI, response_model_exclude_none=True)
@@ -140,24 +123,32 @@ async def modify_job(id: str, job_info: Annotated[ModifyJobParam, fastui_form(Mo
     modify_kwargs = dict(filter(lambda x: x[1], modify_kwargs.items()))
     scheduler.modify_job(id, **modify_kwargs)
 
-    return frame_page(
-        c.Link(components=[c.Text(text="Back")], on_click=BackEvent()),
-        c.Heading(text="Modify Job"),
-        c.Text(text=f"Modify job {id}"),
-    )
+    return [
+        c.Paragraph(text="Job config after modified"),
+        c.Json(value=modify_kwargs),
+        c.Button(text="Back Home", on_click=GoToEvent(url="/")),
+    ]
 
 
-@router.post("/reload/{id}", response_model=FastUI, response_model_exclude_none=True)
-async def reload_job(id: str):
+@router.post("/{action}/{id}", response_model=FastUI, response_model_exclude_none=True)
+async def pause_job(action: Literal["pause", "resume", "modify", "reload", "remove"], id: str):
     job = scheduler.get_job(id)
-    assert job, "Job not found"
+    assert job, f"Job({id=}) not found"
 
-    module = import_module(job.func.__module__)
-    reload(module)
-    return operate_result("reload_job")
+    match action:
+        case "pause":
+            scheduler.pause_job(id)
+        case "resume":
+            scheduler.resume_job(id)
+        case "remove":
+            scheduler.remove_job(id)
+        case "reload":
+            module = import_module(job.func.__module__)
+            reload(module)
+        case _:
+            raise ValueError(f"Invalid action {action}")
 
-
-@router.post("/remove/{id}", response_model=FastUI, response_model_exclude_none=True)
-async def remove_job(id: str):
-    scheduler.remove_job(id)
-    return operate_result("remove_job")
+    return [
+        c.Paragraph(text=f"Job({id=}, name='{job.name}'), {action=} success."),
+        c.Button(text="Back Home", on_click=GoToEvent(url="/")),
+    ]

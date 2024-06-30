@@ -213,6 +213,7 @@ class JobStoreInfo(BaseModel):
     detail: Annotated[
         str,
         Field(
+            "",
             title="Detail",
             description="""SqlAlchemy: string of url.
             MongoDB: {"host": uri, "database": "database", "collection": "collection" }.

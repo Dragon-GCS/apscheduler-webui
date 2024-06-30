@@ -31,58 +31,39 @@ def frame_page(*components: AnyComponent) -> list[AnyComponent]:
     ]
 
 
-def confirm_modal(title: str, modal_name: str, submit_url: str) -> c.Modal:
+def confirm_modal(title: str, submit_url: str) -> c.Modal:
     """
-    Create a modal with a confirm button and a cancel button. The modal is opened by the
-    `modal_name` event and the submit button is triggered by the `submit_trigger_name` event.
+    Create a modal to be confirm this click action. Modal will be open by trigger_name which is the title of the modal.
 
     Args:
         title (str): The title of the modal.
-        modal_name (str): The name of the event that opens the modal.
         submit_url (str): The URL to submit the form to.
     Returns:
         c.Modal: The modal component.
     """
-    submit_trigger_name = f"_trigger_{submit_url}"
+    trigger_name = "_".join(title.lower().split())
     return c.Modal(
         title=title,
         body=[
-            c.Paragraph(text="Are you sure to perform this action?"),
-            c.Form(
-                form_fields=[],
-                footer=[],
-                submit_url=submit_url,
-                submit_trigger=PageEvent(name=submit_trigger_name),
+            c.ServerLoad(
+                path=submit_url,
+                load_trigger=PageEvent(name="confirm"),
+                method="POST",
+                components=[
+                    c.Paragraph(text="Are you sure to perform this action?"),
+                    c.Div(
+                        components=[
+                            c.Button(
+                                text="Cancel",
+                                named_style="secondary",
+                                on_click=PageEvent(name=trigger_name, clear=True),
+                            ),
+                            c.Button(text="Confirm", on_click=PageEvent(name="confirm")),
+                        ],
+                        class_name="d-flex justify-content-around",
+                    ),
+                ],
             ),
         ],
-        footer=[
-            c.Button(
-                text="Cancel",
-                named_style="secondary",
-                on_click=PageEvent(name=modal_name, clear=True),
-            ),
-            c.Button(
-                text="Confirm",
-                named_style="warning",
-                on_click=PageEvent(name=submit_trigger_name),
-            ),
-        ],
-        open_trigger=PageEvent(name=modal_name),
+        open_trigger=PageEvent(name=trigger_name),
     )
-
-
-def operate_finish():
-    return c.Modal(
-        title="Operation finish",
-        body=[
-            c.Button(text="OK", on_click=GoToEvent(url="/")),
-        ],
-        open_trigger=PageEvent(name="operate_finish"),
-    )
-
-
-def operate_result(clear_modal: str):
-    return [
-        c.FireEvent(event=PageEvent(name=clear_modal, clear=True)),
-        c.FireEvent(event=PageEvent(name="operate_finish")),
-    ]

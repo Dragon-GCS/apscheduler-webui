@@ -10,14 +10,14 @@ from fastui.forms import fastui_form
 
 from ..scheduler import scheduler
 from ..schema import ExecutorInfo
-from ..shared import frame_page, operate_finish, operate_result
+from ..shared import frame_page
 
 router = APIRouter(prefix="/job/executor", tags=["executor"])
 
 
 @router.get("", response_model=FastUI, response_model_exclude_none=True)
 def store():
-    job_stores = [
+    executors = [
         ExecutorInfo.model_validate({"alias": alias, "executor": executor})
         for alias, executor in scheduler._executors.items()
     ]
@@ -53,26 +53,31 @@ def store():
             class_name="d-flex flex-start gap-3 mb-3",
         ),
         c.Table(
-            data=job_stores,
+            data=executors,
             columns=[
                 DisplayLookup(field="alias", table_width_percent=20),
                 DisplayLookup(field="type_", table_width_percent=20),
                 DisplayLookup(field="max_worker"),
             ],
         ),
-        operate_finish(),
     )
 
 
-@router.post("/new")
+@router.post("/new", response_model=FastUI, response_model_exclude_none=True)
 async def new_executor(new_executor: Annotated[ExecutorInfo, fastui_form(ExecutorInfo)]):
+    alias = new_executor.alias
+    if new_executor.alias in scheduler._jobstores:
+        return c.Paragraph(text=f"Executor({alias=}) already exists.")
     executor = new_executor.get_executor()
     scheduler.add_executor(executor, alias=new_executor.alias)
-    return operate_result("new_executor")
+    return c.Paragraph(text=f"New executor({alias=}) added successfully.")
 
 
-@router.post("/remove")
+@router.post("/remove", response_model=FastUI, response_model_exclude_none=True)
 async def remove_executor(alias: str = Form()):
-    if alias != "default":
-        scheduler.remove_executor(alias)
-    return operate_result("remove_executor")
+    if alias not in scheduler._executors:
+        return c.Paragraph(text=f"Executor({alias=}) not exists.")
+    elif alias == "default":
+        return c.Paragraph(text="Cannot remove default executor.")
+    scheduler.remove_executor(alias)
+    return c.Paragraph(text=f"Executor({alias=}) removed successfully.")

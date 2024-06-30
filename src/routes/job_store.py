@@ -10,7 +10,7 @@ from fastui.forms import fastui_form
 
 from ..scheduler import scheduler
 from ..schema import JobStoreInfo
-from ..shared import frame_page, operate_finish, operate_result
+from ..shared import frame_page
 
 router = APIRouter(prefix="/job/store", tags=["job_store"])
 
@@ -60,19 +60,24 @@ def store():
                 DisplayLookup(field="detail"),
             ],
         ),
-        operate_finish(),
     )
 
 
-@router.post("/new")
+@router.post("/new", response_model=FastUI, response_model_exclude_none=True)
 async def new_job_store(new_store: Annotated[JobStoreInfo, fastui_form(JobStoreInfo)]):
+    alias = new_store.alias
+    if new_store.alias in scheduler._jobstores:
+        return c.Paragraph(text=f"Job store({alias=}) already exists")
     job_store = new_store.get_store()
-    scheduler.add_jobstore(job_store, alias=new_store.alias)
-    return operate_result("new_store")
+    scheduler.add_jobstore(job_store, alias=alias)
+    return c.Paragraph(text="New job store added successfully")
 
 
-@router.post("/remove")
+@router.post("/remove", response_model=FastUI, response_model_exclude_none=True)
 async def remove_job_store(alias: str = Form()):
-    if alias != "default":
-        scheduler.remove_jobstore(alias)
-    return operate_result("remove_store")
+    if alias not in scheduler._jobstores:
+        return c.Paragraph(text=f"Job store({alias=}) not exists")
+    elif alias == "default":
+        return c.Paragraph(text="Cannot remove default job store")
+    scheduler.remove_jobstore(alias)
+    return c.Paragraph(text=f"Job store({alias=}) removed successfully")

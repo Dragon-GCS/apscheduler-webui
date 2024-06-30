@@ -5,7 +5,6 @@ from fastui import FastUI
 from fastui import components as c
 from fastui.components.forms import FormField, FormFieldSelect, FormFieldSelectSearch
 from fastui.events import GoToEvent
-from fastui.forms import SelectOption
 
 from ..config import LOG_PATH
 from ..log import PARSE_PATTERN, logger
@@ -30,7 +29,7 @@ def log_content_to_markdown(log_name: str | None, level: str):
             f"**[{line['pid']}] {line['time']}** *{line['level']}* "
             f"`{line['name']}:{line['line']}`: {parse_log_message(line['message'])}"
             for line in logger.parse(LOG_PATH / log_name, pattern=PARSE_PATTERN)
-            if not level or level == line["level"].rstrip()
+            if not level or level == line["level"]
         ][::-1]
     )
     return contents
@@ -38,7 +37,7 @@ def log_content_to_markdown(log_name: str | None, level: str):
 
 @router.get("/{kind}", response_model=FastUI, response_model_exclude_none=True)
 def get_log(kind: Literal["jobs", "scheduler"], log_file: str | None = None, level: str = ""):
-    filter_field: list[FormField] = [
+    form_fields: list[FormField] = [
         FormFieldSelect(
             title="Level",
             name="level",
@@ -50,30 +49,21 @@ def get_log(kind: Literal["jobs", "scheduler"], log_file: str | None = None, lev
         )
     ]
     if kind == "jobs":
-        initial = None  # type: ignore
-        if log_file is None:
-            initial: SelectOption = get_available_job_logs().options[0]  # type: ignore
-            log_file = initial["value"]
-        filter_field.append(
+        field_initial = get_available_job_logs().options[0]
+        if "options" in field_initial:
+            field_initial = field_initial["options"][0]
+        form_fields.append(
             FormFieldSelectSearch(
                 title="Log File",
                 name="log_file",
                 search_url="/api/available-logs",
-                initial=initial,
-            )
+                initial=field_initial,
+            ),
         )
+        log_file = field_initial["value"]
+    else:
+        log_file = "scheduler.log"
 
-    log_name = log_file if kind == "jobs" else "scheduler.log"
-    components = [
-        c.Form(
-            form_fields=filter_field,
-            submit_url=".",
-            method="GOTO",
-            submit_on_change=True,
-            display_mode="inline",
-        ),
-        c.Markdown(text=log_content_to_markdown(log_name, level), class_name="border rounded p-2"),
-    ]
     return frame_page(
         c.Heading(text="Logs"),
         c.LinkList(
@@ -92,5 +82,12 @@ def get_log(kind: Literal["jobs", "scheduler"], log_file: str | None = None, lev
             mode="tabs",
             class_name="+ mb-4",
         ),
-        *components,
+        c.Form(
+            form_fields=form_fields,
+            submit_url=".",
+            method="GOTO",
+            submit_on_change=True,
+            display_mode="inline",
+        ),
+        c.Markdown(text=log_content_to_markdown(log_file, level), class_name="border rounded p-2"),
     )

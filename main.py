@@ -22,10 +22,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-app.include_router(job_router)
 app.include_router(executor_router)
 app.include_router(store_router)
 app.include_router(log_router)
+app.include_router(job_router)  # this router has a wildcard path: /job/{action}/{id}
 app.include_router(api_router)
 
 
