@@ -1,4 +1,5 @@
 from importlib import import_module, reload
+from pathlib import Path
 from typing import Annotated, Literal
 from uuid import uuid4
 
@@ -81,12 +82,28 @@ async def job_detail(id: str):
     if not job:
         return [c.FireEvent(event=GoToEvent(url="/"))]
     job_model = JobInfo.model_validate(job)
+    path = Path(*job.func.__module__.split(".")).with_suffix(".py")
     return frame_page(
         c.Link(components=[c.Text(text="Back")], on_click=BackEvent()),
         c.Heading(text="Job Detail"),
         c.Div(
             components=[
                 # confirm model will be triggered by the underscored title of the modal
+                c.Button(
+                    text="View Script",
+                    on_click=PageEvent(name="view", next_event=PageEvent(name="load-script")),
+                    named_style="secondary",
+                ),
+                c.Modal(
+                    title=str(path),
+                    body=[
+                        c.ServerLoad(
+                            path=f"/view/{path}", load_trigger=PageEvent(name="load-script")
+                        )
+                    ],
+                    open_trigger=PageEvent(name="view"),
+                    class_name="modal-xl",
+                ),
                 c.Button(text="Pause", on_click=PageEvent(name="pause_job")),
                 confirm_modal(title="Pause Job", submit_url=f"/pause/{id}"),
                 c.Button(text="Resume", on_click=PageEvent(name="resume_job")),
@@ -133,7 +150,8 @@ async def modify_job(id: str, job_info: Annotated[ModifyJobParam, fastui_form(Mo
 @router.post("/{action}/{id}", response_model=FastUI, response_model_exclude_none=True)
 async def pause_job(action: Literal["pause", "resume", "modify", "reload", "remove"], id: str):
     job = scheduler.get_job(id)
-    assert job, f"Job({id=}) not found"
+    if not job:
+        return c.Error(title="Error", description=f"Job({id=}) not found", status_code=500)
 
     match action:
         case "pause":
@@ -152,3 +170,10 @@ async def pause_job(action: Literal["pause", "resume", "modify", "reload", "remo
         c.Paragraph(text=f"Job({id=}, name='{job.name}'), {action=} success."),
         c.Button(text="Back Home", on_click=GoToEvent(url="/")),
     ]
+
+
+@router.get("/view/{path:path}", response_model=FastUI, response_model_exclude_none=True)
+def edit_job_script(path: Path):
+    if not path.exists():
+        return c.Error(title="Error", description=f"Module {path} not found", status_code=500)
+    return c.Markdown(text=f"```python\n{path.read_text()}```")
