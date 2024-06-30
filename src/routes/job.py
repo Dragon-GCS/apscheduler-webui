@@ -176,4 +176,4 @@ async def pause_job(action: Literal["pause", "resume", "modify", "reload", "remo
 def edit_job_script(path: Path):
     if not path.exists():
         return c.Error(title="Error", description=f"Module {path} not found", status_code=500)
-    return c.Markdown(text=f"```python\n{path.read_text()}```")
+    return c.Code(text=path.read_text(), language="python")

@@ -2,11 +2,11 @@
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![Python Version](https://img.shields.io/badge/Python-3.10%2B-green.svg)](https://www.python.org/downloads/release/python-380/) [![FastUI Version](https://img.shields.io/badge/FastUI-orange.svg)](https://fastui.fastapi.tiangolo.com/) [![Apscheduler](https://img.shields.io/badge/APScheduler-3.x-blue.svg)](https://github.com/agronholm/apscheduler)
 
+[中文](README.md) | English
+
 **apscheduler-webui** is a lightweight task scheduling web service built upon [APScheduler](https://github.com/agronholm/apscheduler) and [FastUI](https://fastui.fastapi.tiangolo.com/), designed to provide a concise and intuitive interface for managing and monitoring scheduled tasks, while leveraging the powerful capabilities of `APScheduler` to execute background tasks in a flexible and efficient manner.
 
 ![screenshot](./pictures/screenshot.png)
-
-[中文](README.md) | English
 
 ## Table of Contents
 
@@ -21,10 +21,11 @@
 
 ## Features
 
-- Create, modify, pause, resume and remove jobs
+- Create, modify, pause, resume, remove and reload jobs
 - Support for Cron, Interval, and Date triggers
 - Create and delete Executors and JobStores
 - Support for view your logs
+- View the content of script files
 
 ## Quick Start
 

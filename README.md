@@ -2,11 +2,11 @@
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![Python Version](https://img.shields.io/badge/Python-3.10%2B-green.svg)](https://www.python.org/downloads/release/python-380/) [![FastUI Version](https://img.shields.io/badge/FastUI-orange.svg)](https://fastui.fastapi.tiangolo.com/) [![Apscheduler](https://img.shields.io/badge/APScheduler-3.x-blue.svg)](https://github.com/agronholm/apscheduler)
 
+中文 | [English](README_en.md)
+
 **apscheduler-webui** 是一个基于 [APScheduler](https://github.com/agronholm/apscheduler) 和 [FastUI](https://fastui.fastapi.tiangolo.com/) 构建的轻量级任务调度Web服务，旨在提供简洁直观的界面以管理和监控定时任务，同时利用 `APScheduler` 的强大功能实现灵活、高效的后台任务执行。
 
 ![screenshot](./pictures/screenshot.png)
-
-中文 | [English](README_en.md)
 
 ## 目录
 
@@ -21,10 +21,11 @@
 
 ## 主要特性
 
-- 创建、编辑、删除任务
+- 创建、编辑、暂停、启动、删除、重载任务
 - 支持Cron、Interval、Date触发器
 - 创建、删除Executor和JobStore
 - 任务执行日志
+- 查看脚本文件内容
 
 ## 快速开始
 
