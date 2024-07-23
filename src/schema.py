@@ -100,7 +100,9 @@ class TriggerParam(BaseModel):
             keys = ("year", "month", "day", "hour", "minute", "second")
             params = {}
             if next_run_time is not None:
-                params.update(getattr(next_run_time, k) for k in keys if hasattr(next_run_time, k))
+                params.update(
+                    {k: getattr(next_run_time, k) for k in keys if hasattr(next_run_time, k)}
+                )
             params.update(
                 {k: int(getattr(self, k)) for k in keys if getattr(self, k, None) is not None}
             )
