@@ -22,9 +22,9 @@ from apscheduler.job import Job
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from .config import SCHEDULER_CONFIG
-from .log import logger, server_log
+from .log import server_log
 
-scheduler = AsyncIOScheduler(**SCHEDULER_CONFIG, logger=logger)
+scheduler = AsyncIOScheduler(**SCHEDULER_CONFIG)
 
 
 def listen_executor_or_jobstore_event(
