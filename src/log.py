@@ -1,4 +1,5 @@
 # cspell: words autoinit
+import datetime
 import inspect
 import logging
 import os
@@ -49,7 +50,7 @@ logger.add(
     diagnose=False,
     enqueue=True,
     filter=filter_server_record,
-    rotation="1 day",
+    rotation=datetime.time(0, 0),
 )
 
 server_log = logger.bind(server=True)

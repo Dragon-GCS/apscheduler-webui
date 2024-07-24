@@ -26,7 +26,6 @@ def parse_log_message(text: str):
     return messages[0]
 
 
-@lru_cache(maxsize=100)
 def get_log_content(log_file: str, level: str):
     return [
         f"**[{line['pid']}] {line['time']}** *{line['level']}* "
