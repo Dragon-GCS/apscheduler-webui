@@ -142,7 +142,10 @@ async def modify_job(id: str, job_info: Annotated[ModifyJobParam, fastui_form(Mo
 
     return [
         c.Paragraph(text="Job config after modified"),
-        c.Json(value=modify_kwargs),
+        c.Json(
+            value=modify_kwargs
+            | {"trigger": job_info.trigger, "trigger_params": job_info.trigger_params}
+        ),
         c.Button(text="Back Home", on_click=GoToEvent(url="/")),
     ]
 
