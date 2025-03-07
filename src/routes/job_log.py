@@ -1,4 +1,3 @@
-from functools import lru_cache
 from typing import Annotated, Literal
 
 from fastapi import APIRouter
@@ -11,7 +10,7 @@ from pydantic import Field
 
 from ..config import LOG_PATH
 from ..log import PARSE_PATTERN, logger
-from ..shared import frame_page
+from ..shared import Components, frame_page
 from .api import get_available_job_logs
 
 router = APIRouter(prefix="/job/log", tags=["job_log"])
@@ -19,14 +18,14 @@ router = APIRouter(prefix="/job/log", tags=["job_log"])
 PAGE_LINE = 1000
 
 
-def parse_log_message(text: str):
+def parse_log_message(text: str) -> str:
     messages = text.strip().split("\n", 1)
     if len(messages) > 1:
         return f"{messages[0]}\n```\n{messages[1]}\n```"
     return messages[0]
 
 
-def get_log_content(log_file: str, level: str):
+def get_log_content(log_file: str, level: str) -> list[str]:
     return [
         f"**[{line['pid']}] {line['time']}** *{line['level']}* "
         f"`{line['name']}:{line['line']}`: {parse_log_message(line['message'])}"
@@ -41,7 +40,7 @@ async def get_log(
     log_file: str | None = None,
     level: str = "",
     page: Annotated[int, Field(ge=1)] = 1,
-):
+) -> Components:
     form_fields: list[FormField] = [
         FormFieldSelect(
             title="Level",
@@ -49,7 +48,7 @@ async def get_log(
             placeholder="Filter by level",
             options=[
                 {"value": level, "label": level}
-                for level in logger._core.levels.keys()  # type: ignore
+                for level in logger._core.levels  # type: ignore
             ],
         )
     ]
@@ -74,7 +73,7 @@ async def get_log(
         log_file = "scheduler.log"
 
     if not (log_file and (LOG_PATH / log_file).exists()):
-        return c.Error(title="File not found", description=f"Log file {log_file} not found.")
+        return [c.Error(title="File not found", description=f"Log file {log_file} not found.")]
 
     contents = get_log_content(log_file, level)
     return frame_page(

@@ -10,13 +10,13 @@ from fastui.forms import fastui_form
 
 from ..scheduler import scheduler
 from ..schema import ExecutorInfo
-from ..shared import frame_page
+from ..shared import Components, frame_page
 
 router = APIRouter(prefix="/job/executor", tags=["executor"])
 
 
 @router.get("", response_model=FastUI, response_model_exclude_none=True)
-def store():
+def store() -> Components:
     executors = [
         ExecutorInfo.model_validate({"alias": alias, "executor": executor})
         for alias, executor in scheduler._executors.items()
@@ -64,7 +64,9 @@ def store():
 
 
 @router.post("/new", response_model=FastUI, response_model_exclude_none=True)
-async def new_executor(new_executor: Annotated[ExecutorInfo, fastui_form(ExecutorInfo)]):
+async def new_executor(
+    new_executor: Annotated[ExecutorInfo, fastui_form(ExecutorInfo)],
+) -> c.Paragraph:
     alias = new_executor.alias
     if new_executor.alias in scheduler._jobstores:
         return c.Paragraph(text=f"Executor({alias=}) already exists.")
@@ -74,10 +76,10 @@ async def new_executor(new_executor: Annotated[ExecutorInfo, fastui_form(Executo
 
 
 @router.post("/remove", response_model=FastUI, response_model_exclude_none=True)
-async def remove_executor(alias: str = Form()):
+async def remove_executor(alias: Annotated[str, Form()]) -> c.Paragraph:
     if alias not in scheduler._executors:
         return c.Paragraph(text=f"Executor({alias=}) not exists.")
-    elif alias == "default":
+    if alias == "default":
         return c.Paragraph(text="Cannot remove default executor.")
     scheduler.remove_executor(alias)
     return c.Paragraph(text=f"Executor({alias=}) removed successfully.")

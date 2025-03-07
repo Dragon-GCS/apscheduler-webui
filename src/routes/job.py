@@ -4,21 +4,22 @@ from typing import Annotated, Literal
 from uuid import uuid4
 
 from fastapi import APIRouter
-from fastui import FastUI
+from fastui import AnyComponent, FastUI
 from fastui import components as c
 from fastui.components.display import DisplayLookup
 from fastui.events import BackEvent, GoToEvent, PageEvent
 from fastui.forms import fastui_form
 
+from ..exceptions import InvalidAction
 from ..scheduler import scheduler
 from ..schema import JobInfo, ModifyJobParam, NewJobParam
-from ..shared import confirm_modal, frame_page
+from ..shared import Components, confirm_modal, frame_page
 
 router = APIRouter(prefix="/job", tags=["job"])
 
 
 @router.get("/", response_model=FastUI, response_model_exclude_none=True)
-async def jobs():
+async def jobs() -> Components:
     jobs = scheduler.get_jobs()
 
     return frame_page(
@@ -54,7 +55,7 @@ async def jobs():
 
 
 @router.post("/", response_model=FastUI, response_model_exclude_none=True)
-async def new_job(job_info: Annotated[NewJobParam, fastui_form(NewJobParam)]):
+async def new_job(job_info: Annotated[NewJobParam, fastui_form(NewJobParam)]) -> Components:
     trigger = job_info.get_trigger()
     job = scheduler.add_job(
         job_info.func,
@@ -77,7 +78,7 @@ async def new_job(job_info: Annotated[NewJobParam, fastui_form(NewJobParam)]):
 
 
 @router.get("/detail/{id}", response_model=FastUI, response_model_exclude_none=True)
-async def job_detail(id: str):
+async def job_detail(id: str) -> Components:
     job = scheduler.get_job(id)
     if not job:
         return [c.FireEvent(event=GoToEvent(url="/"))]
@@ -134,7 +135,9 @@ async def job_detail(id: str):
 
 
 @router.post("/modify/{id}", response_model=FastUI, response_model_exclude_none=True)
-async def modify_job(id: str, job_info: Annotated[ModifyJobParam, fastui_form(ModifyJobParam)]):
+async def modify_job(
+    id: str, job_info: Annotated[ModifyJobParam, fastui_form(ModifyJobParam)]
+) -> Components:
     modify_kwargs = job_info.model_dump(exclude={"trigger", "trigger_params"})
     modify_kwargs["trigger"] = job_info.get_trigger()
     modify_kwargs = dict(filter(lambda x: x[1], modify_kwargs.items()))
@@ -151,10 +154,12 @@ async def modify_job(id: str, job_info: Annotated[ModifyJobParam, fastui_form(Mo
 
 
 @router.post("/{action}/{id}", response_model=FastUI, response_model_exclude_none=True)
-async def pause_job(action: Literal["pause", "resume", "modify", "reload", "remove"], id: str):
+async def pause_job(
+    action: Literal["pause", "resume", "modify", "reload", "remove"], id: str
+) -> Components:
     job = scheduler.get_job(id)
     if not job:
-        return c.Error(title="Error", description=f"Job({id=}) not found", status_code=500)
+        return [c.Error(title="Error", description=f"Job({id=}) not found", status_code=500)]
 
     match action:
         case "pause":
@@ -167,7 +172,7 @@ async def pause_job(action: Literal["pause", "resume", "modify", "reload", "remo
             module = import_module(job.func.__module__)
             reload(module)
         case _:
-            raise ValueError(f"Invalid action {action}")
+            raise InvalidAction(action)
 
     return [
         c.Paragraph(text=f"Job({id=}, name='{job.name}'), {action=} success."),
@@ -176,7 +181,7 @@ async def pause_job(action: Literal["pause", "resume", "modify", "reload", "remo
 
 
 @router.get("/view/{path:path}", response_model=FastUI, response_model_exclude_none=True)
-def edit_job_script(path: Path):
+def edit_job_script(path: Path) -> AnyComponent:
     if not path.exists():
         return c.Error(title="Error", description=f"Module {path} not found", status_code=500)
     return c.Code(text=path.read_text(), language="python")

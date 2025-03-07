@@ -1,6 +1,6 @@
 import datetime
 import json
-from typing import Annotated, Literal, TypeAlias
+from typing import TYPE_CHECKING, Annotated, Literal, TypeAlias
 
 from apscheduler.executors.asyncio import AsyncIOExecutor
 from apscheduler.executors.pool import ProcessPoolExecutor, ThreadPoolExecutor
@@ -11,12 +11,17 @@ from apscheduler.triggers.interval import IntervalTrigger
 from fastapi import HTTPException
 from pydantic import BaseModel, Field, PlainSerializer, model_validator
 
+from .exceptions import InvalidExecutor, InvalidJobStore, InvalidTrigger
 from .scheduler import scheduler
+
+if TYPE_CHECKING:
+    from apscheduler.executors.base import BaseExecutor
+    from apscheduler.jobstores.base import BaseJobStore
 
 AllTrigger: TypeAlias = CronTrigger | DateTrigger | IntervalTrigger
 
 
-def format_date(date: datetime.datetime | datetime.date | None):
+def format_date(date: datetime.datetime | datetime.date | None) -> str | None:
     if date is None:
         return None
     return date.strftime("%Y-%m-%d %H:%M:%S")
@@ -77,7 +82,7 @@ class TriggerParam(BaseModel):
         elif isinstance(trigger, dict):
             trigger_param = dict(filter(lambda i: i[1], trigger.items()))
         else:
-            raise ValueError(f"Invalid trigger: {trigger}(type: {type(trigger)}")
+            raise InvalidTrigger(trigger)
         return trigger_param
 
     def get_trigger(
@@ -96,7 +101,7 @@ class TriggerParam(BaseModel):
                 start_date=self.start_date,
                 end_date=self.end_date,
             )
-        elif trigger == "Date":
+        if trigger == "Date":
             keys = ("year", "month", "day", "hour", "minute", "second")
             params = {}
             if next_run_time is not None:
@@ -107,7 +112,7 @@ class TriggerParam(BaseModel):
                 {k: int(getattr(self, k)) for k in keys if getattr(self, k, None) is not None}
             )
             return DateTrigger(run_date=datetime.datetime(**params))  # type: ignore
-        elif trigger == "Interval":
+        if trigger == "Interval":
             return IntervalTrigger(
                 weeks=int(self.week or 0),
                 days=int(self.day or 0),
@@ -117,8 +122,7 @@ class TriggerParam(BaseModel):
                 start_date=self.start_date,
                 end_date=self.end_date,
             )
-        else:
-            raise ValueError(f"Invalid trigger: {trigger}")
+        raise InvalidTrigger(trigger)
 
 
 class JobInfo(BaseModel):
@@ -175,7 +179,7 @@ class ModifyJobParam(BaseModel):
     next_run_time: Annotated[datetime.datetime | None, Field(None, title="Next Run")]
     trigger: Annotated[Literal["Cron", "Date", "Interval"], Field(title="Trigger")]
     trigger_params: Annotated[TriggerParam, Field(title="Trigger Params")]
-    args: Annotated[tuple, Field(tuple(), title="Arguments", description="List with json format")]
+    args: Annotated[tuple, Field((), title="Arguments", description="List with json format")]
     kwargs: Annotated[
         dict, Field({}, title="Keyword Arguments", description="Dict with json format")
     ]
@@ -192,10 +196,10 @@ class ModifyJobParam(BaseModel):
         params.setdefault("trigger_params", TriggerParam())  # type: ignore
         return params
 
-    def get_trigger(self):
+    def get_trigger(self) -> AllTrigger | None:
         trigger_params = self.trigger_params.model_dump(exclude_none=True)
         if not trigger_params:
-            return
+            return None
         return self.trigger_params.get_trigger(self.trigger, self.next_run_time)
 
 
@@ -260,33 +264,32 @@ class JobStoreInfo(BaseModel):
             pool_kwargs = store.redis.connection_pool.connection_kwargs
             job_store["detail"] = json.dumps({k: pool_kwargs[k] for k in ("host", "port", "db")})
         else:
-            raise ValueError(f"Invalid job store: {store}")
+            raise InvalidJobStore(store)
         return {"type_": type_, **job_store}
 
-    def get_store(self):
+    def get_store(self) -> "BaseJobStore":
         try:
             if self.type_ == "Memory":
                 from apscheduler.jobstores.memory import MemoryJobStore
 
                 return MemoryJobStore()
-            elif self.type_ == "SQLAlchemy":
+            if self.type_ == "SQLAlchemy":
                 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 
                 return SQLAlchemyJobStore(url=self.detail)
-            elif self.type_ == "MongoDB":
+            if self.type_ == "MongoDB":
                 from apscheduler.jobstores.mongodb import MongoDBJobStore
 
                 kwargs = json.loads(self.detail)
                 return MongoDBJobStore(**kwargs)
-            elif self.type_ == "Redis":
+            if self.type_ == "Redis":
                 from apscheduler.jobstores.redis import RedisJobStore
 
                 kwargs = json.loads(self.detail)
                 return RedisJobStore(**kwargs)
-            else:
-                raise ValueError(f"Invalid job store: {self.type_}")
+            raise InvalidJobStore(self.type_)
         except ImportError as e:
-            raise HTTPException(status_code=400, detail=e)
+            raise HTTPException(status_code=400, detail=e) from e
 
 
 class ExecutorInfo(BaseModel):
@@ -307,7 +310,7 @@ class ExecutorInfo(BaseModel):
             executor_info["max_worker"] = executor._pool._max_workers
         return executor_info
 
-    def get_executor(self):
+    def get_executor(self) -> "BaseExecutor":
         if self.type_ == "Asyncio":
             return AsyncIOExecutor()
         kwargs = {}
@@ -315,7 +318,6 @@ class ExecutorInfo(BaseModel):
             kwargs["max_workers"] = self.max_worker
         if self.type_ == "ThreadPool":
             return ThreadPoolExecutor(**kwargs)
-        elif self.type_ == "ProcessPool":
+        if self.type_ == "ProcessPool":
             return ProcessPoolExecutor(**kwargs)
-        else:
-            raise ValueError(f"Executor type {self.type_} not supported")
+        raise InvalidExecutor(self.type_)

@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from apscheduler.events import (
     EVENT_EXECUTOR_ADDED,
@@ -18,11 +18,13 @@ from apscheduler.events import (
     JobSubmissionEvent,
     SchedulerEvent,
 )
-from apscheduler.job import Job
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from .config import SCHEDULER_CONFIG
 from .log import server_log
+
+if TYPE_CHECKING:
+    from apscheduler.job import Job
 
 scheduler = AsyncIOScheduler(**SCHEDULER_CONFIG)
 
@@ -31,14 +33,14 @@ def listen_executor_or_jobstore_event(
     event: SchedulerEvent,
     mapper: dict,
     action: Literal["Add executor", "Remove executor", "Add job store", "Remove job store"],
-):
+) -> None:
     obj = f"{event.alias}[{mapper[event.alias]}]" if event.alias in mapper else event.alias
     server_log.debug(f"{action} {obj}")
 
 
 def listen_job_event(
     event: JobEvent, action: Literal["Add job", "Remove job", "Modify job", "Submit job"]
-):
+) -> None:
     job: Job | None = scheduler.get_job(event.job_id)
     server_log.debug(f"{action}: {job.name if job else ''}[{event.job_id}]")
 
@@ -46,7 +48,7 @@ def listen_job_event(
 def listen_job_execution_event(
     event: JobExecutionEvent,
     action: Literal["Executed job", "Missed job", "Error job"],
-):
+) -> None:
     message = f"{action}: {event.job_id}[{scheduler.get_job(event.job_id)}]"
     if event.exception:
         server_log.opt(exception=event.exception).error(message)
@@ -54,7 +56,7 @@ def listen_job_execution_event(
         server_log.debug(message)
 
 
-def listen_job_submission_event(event: JobSubmissionEvent):
+def listen_job_submission_event(event: JobSubmissionEvent) -> None:
     job: Job | None = scheduler.get_job(event.job_id)
     if not job:
         return

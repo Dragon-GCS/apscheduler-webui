@@ -2,8 +2,10 @@ from fastui import AnyComponent
 from fastui import components as c
 from fastui.events import GoToEvent, PageEvent
 
+Components = list[AnyComponent]
 
-def frame_page(*components: AnyComponent) -> list[AnyComponent]:
+
+def frame_page(*components: AnyComponent) -> Components:
     return [
         c.Navbar(
             title="Scheduler",
