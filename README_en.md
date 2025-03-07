@@ -14,6 +14,8 @@
   - [Table of Contents](#table-of-contents)
   - [Features](#features)
   - [Quick Start](#quick-start)
+    - [Local Deployment](#local-deployment)
+    - [Docker](#docker)
     - [Mange jobs](#mange-jobs)
     - [Manger Executor and JobStore](#manger-executor-and-jobstore)
     - [View logs](#view-logs)
@@ -29,13 +31,15 @@
 
 ## Quick Start
 
-1. Clone the repository
+Clone the repository
 
-    ```bash
-    git clone https://github.com/Dragon-GCS/apscheduler-webui
-    ```
+  ```bash
+  git clone https://github.com/Dragon-GCS/apscheduler-webui
+  ```
 
-2. Install dependencies
+### Local Deployment
+
+1. Install dependencies
 
     Use [start](https://github.com/Dragon-GCS/start)(Recommended)
 
@@ -51,11 +55,15 @@
     pip install .
     ```
 
-3. Start the server
+2. Start the server
 
     ```bash
     uvicron main:app --port <port>
     ```
+
+### Docker
+
+See [docker/DOCKER.md](docker/DOCKER.md)
 
 ### Mange jobs
 

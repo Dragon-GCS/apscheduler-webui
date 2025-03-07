@@ -14,6 +14,8 @@
   - [目录](#目录)
   - [主要特性](#主要特性)
   - [快速开始](#快速开始)
+    - [本地部署](#本地部署)
+    - [Docker部署](#docker部署)
     - [任务管理](#任务管理)
     - [Executor、JobStore管理](#executorjobstore管理)
     - [日志查看](#日志查看)
@@ -29,13 +31,15 @@
 
 ## 快速开始
 
-1. 克隆本仓库
+克隆本仓库
 
-    ```bash
-    git clone https://github.com/Dragon-GCS/apscheduler-webui
-    ```
+  ```bash
+  git clone https://github.com/Dragon-GCS/apscheduler-webui
+  ```
 
-2. 安装依赖
+### 本地部署
+
+1. 安装依赖
 
     推荐使用[start](https://github.com/Dragon-GCS/start)
 
@@ -51,11 +55,15 @@
     pip install .
     ```
 
-3. 启动服务
+2. 启动服务
 
     ```bash
     uvicron main:app
     ```
+
+### Docker部署
+
+见[docker/DOCKER.md](docker/DOCKER.md)
 
 ### 任务管理
 
