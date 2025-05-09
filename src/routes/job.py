@@ -13,7 +13,7 @@ from fastui.forms import fastui_form
 from ..exceptions import InvalidAction
 from ..scheduler import scheduler
 from ..schema import JobInfo, ModifyJobParam, NewJobParam
-from ..shared import Components, confirm_modal, frame_page
+from ..shared import Components, confirm_modal, frame_page, h_stack, reload_event
 
 router = APIRouter(prefix="/job", tags=["job"])
 
@@ -72,8 +72,7 @@ async def new_job(job_info: Annotated[NewJobParam, fastui_form(NewJobParam)]) ->
     )
     return [
         c.Paragraph(text=f"Created new job(id={job.id})"),
-        # TODO: GotoEvent will not refresh the page
-        c.Button(text="Back Home", on_click=GoToEvent(url="/")),
+        h_stack(c.Button(text="Ok", on_click=reload_event("/")), class_name="gap-3 mb-3"),
     ]
 
 
@@ -149,14 +148,12 @@ async def modify_job(
             value=modify_kwargs
             | {"trigger": job_info.trigger, "trigger_params": job_info.trigger_params}
         ),
-        c.Button(text="Back Home", on_click=GoToEvent(url="/")),
+        h_stack(c.Button(text="Ok", on_click=reload_event(f"/detail/{id}"))),
     ]
 
 
 @router.post("/{action}/{id}", response_model=FastUI, response_model_exclude_none=True)
-async def pause_job(
-    action: Literal["pause", "resume", "modify", "reload", "remove"], id: str
-) -> Components:
+async def pause_job(action: Literal["pause", "resume", "reload", "remove"], id: str) -> Components:
     job = scheduler.get_job(id)
     if not job:
         return [c.Error(title="Error", description=f"Job({id=}) not found", status_code=500)]
@@ -176,7 +173,7 @@ async def pause_job(
 
     return [
         c.Paragraph(text=f"Job({id=}, name='{job.name}'), {action=} success."),
-        c.Button(text="Back Home", on_click=GoToEvent(url="/")),
+        h_stack(c.Button(text="Ok", on_click=reload_event(f"/detail/{id}"))),
     ]
 
 

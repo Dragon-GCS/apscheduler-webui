@@ -1,3 +1,6 @@
+from urllib.parse import parse_qs, urlencode, urlparse
+from uuid import uuid4
+
 from fastui import AnyComponent
 from fastui import components as c
 from fastui.events import GoToEvent, PageEvent
@@ -68,4 +71,25 @@ def confirm_modal(title: str, submit_url: str) -> c.Modal:
             ),
         ],
         open_trigger=PageEvent(name=trigger_name),
+    )
+
+
+def reload_event(current_url: str) -> GoToEvent:
+    """
+    Use uuid4 to generate a unique query parameter to force the browser to reload the page,
+    see https://github.com/pydantic/FastUI/issues/255
+    """
+    parsed_url = urlparse(current_url)
+    params = {"refresh": str(uuid4())} | parse_qs(parsed_url.query)
+    return GoToEvent(url=f"{parsed_url.path}?{urlencode(params, doseq=True)}")
+
+
+def h_stack(*component: AnyComponent, class_name: str = "") -> c.Div:
+    """
+    Center components horizontally.
+    """
+
+    return c.Div(
+        components=list(component),
+        class_name=f"d-flex justify-content-center {class_name}",
     )
