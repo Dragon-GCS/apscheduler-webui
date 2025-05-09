@@ -5,11 +5,13 @@ requires = ['setuptools']
 [project]
 name = 'apscheduler-webui'
 version = '0.0.1'
+requires-python = '>=3.10'
 dependencies = [
     'apscheduler',
     'fastapi',
     'fastui',
     'loguru',
+    "pydantic<2.10",
     'python-multipart',
     'uvicorn',
 ]
