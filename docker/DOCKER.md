@@ -2,39 +2,48 @@
 
 This document provides instructions for deploying APScheduler WebUI using Docker.
 
-## Using Dockerfile
+## Using docker run
 
-### Building the Image
+From pre-built image
+
+```bash
+docker pull drag0nz/apscheduler-webui:latest
+```
+
+Or build by yourself
 
 ```bash
 # Execute in the project root directory
-docker build -t apscheduler-webui -f docker/Dockerfile .
+docker build -t drag0nz/apscheduler-webui -f docker/Dockerfile .
 ```
 
-### Running the Container
+If you want to change some config, export config file to current directory
 
 ```bash
-docker run -d --name apscheduler-webui -p 8000:8000 -v $(pwd)/logs:/app/logs apscheduler-webui
+docker run -i --rm drag0nz/apscheduler-webui:latest cat /app/src/config.py > config.py
+```
+
+Run the container
+
+```bash
+docker run \
+  -d \
+  --name apscheduler-webui \
+  -p 8000:8000 \
+  -v $(pwd)/logs:/app/logs \
+  -v config.py:/app/src/config.py \
+  drag0nz/apscheduler-webui:latest
 ```
 
 ## Using Docker Compose
 
-### Starting the Service
-
 ```bash
+# Starting the Service
 # Execute in the project root directory
 docker-compose -f docker/docker-compose.yml up -d
-```
-
-### Stopping the Service
-
-```bash
+# Stopping the Service
 docker-compose -f docker/docker-compose.yml down
-```
-
-### Viewing Logs
-
-```bash
+# Viewing Logs
 docker-compose -f docker/docker-compose.yml logs -f
 ```
 
@@ -47,6 +56,12 @@ By default, the application runs on port 8000 inside the container and is mapped
 ```yaml
 ports:
   - "custom_port:8000"
+```
+
+or in the `docker run` command:
+
+```bash
+docker run ... -p <custom_port>:8000 ... apscheduler-webui
 ```
 
 ### Data Persistence
@@ -109,14 +124,3 @@ environment:
   - TZ=Asia/Shanghai
   # Add other environment variables
 ```
-
-## Building a Development Environment
-
-If you need to include development dependencies, modify the following line in the Dockerfile:
-
-```dockerfile
-# Uncomment the following line
-RUN pip install --no-cache-dir -e ".[dev]"
-```
-
-This will install optional dependencies such as pymongo, redis, and sqlalchemy.

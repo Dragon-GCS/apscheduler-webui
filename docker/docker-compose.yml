@@ -11,6 +11,8 @@ services:
       - "8000:8000"
     volumes:
       - ../logs:/app/logs
+      # Uncomment if you have a custom config.py
+      # - ../config.py:/app/src/config.py
     environment:
       - TZ=Asia/Shanghai
     command: uvicorn main:app --host 0.0.0.0 --port 8000
