@@ -43,15 +43,17 @@ Clone the repository
 
     Use [uv](https://hellowac.github.io/uv-zh-cn/getting-started/installation/)
 
+    > If you only need to use one of sql/mongo/redis as a persistence option, you can install only the corresponding dependencies. By default, all dependencies are installed.
+
     ```bash
-    uv sync
+    uv sync --extra all # all = mongo+redis+sql
     ```
 
     Or use `pip`
 
     ```bash
     python -m venv .venv # Create virtual environment(Optional)
-    pip install .
+    pip install .[all]
     ```
 
 2. Start the server
@@ -61,7 +63,7 @@ Clone the repository
     uv run uvicorn main:app
     # use python
     source .venv/bin/activate # If have virtual environment
-    uvicron main:app
+    uvicorn main:app
     ```
 
 ### Docker

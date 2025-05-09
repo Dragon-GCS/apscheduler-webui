@@ -43,15 +43,17 @@
 
     推荐使用[uv](https://hellowac.github.io/uv-zh-cn/getting-started/installation/)
 
+    > 如果你只需要使用sql/mongo/redis中的某一个作为持久化选项，可以只安装对应的依赖。默认安装全部依赖
+
     ```bash
-    uv sync
+    uv sync --extra all # or all = mongo+redis+sql
     ```
 
     或者使用`pip`
 
     ```bash
     python -m venv .venv # 创建虚拟环境（可选）
-    pip install .
+    pip install .[all]
     ```
 
 2. 启动服务

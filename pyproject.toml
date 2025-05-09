@@ -21,7 +21,10 @@ name = 'Dragon-GCS'
 email = '878173121@qq.com'
 
 [project.optional-dependencies]
-dev = [
+mongo = [ 'pymongo' ]
+redis = [ 'redis' ]
+sql = [ 'sqlalchemy' ]
+all = [
     'pymongo',
     'redis',
     'sqlalchemy',

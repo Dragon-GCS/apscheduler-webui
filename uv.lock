@@ -57,9 +57,18 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-dev = [
+all = [
     { name = "pymongo" },
     { name = "redis" },
+    { name = "sqlalchemy" },
+]
+mongo = [
+    { name = "pymongo" },
+]
+redis = [
+    { name = "redis" },
+]
+sql = [
     { name = "sqlalchemy" },
 ]
 
@@ -70,13 +79,16 @@ requires-dist = [
     { name = "fastui" },
     { name = "loguru" },
     { name = "pydantic", specifier = "<2.10" },
-    { name = "pymongo", marker = "extra == 'dev'" },
+    { name = "pymongo", marker = "extra == 'all'" },
+    { name = "pymongo", marker = "extra == 'mongo'" },
     { name = "python-multipart" },
-    { name = "redis", marker = "extra == 'dev'" },
-    { name = "sqlalchemy", marker = "extra == 'dev'" },
+    { name = "redis", marker = "extra == 'all'" },
+    { name = "redis", marker = "extra == 'redis'" },
+    { name = "sqlalchemy", marker = "extra == 'all'" },
+    { name = "sqlalchemy", marker = "extra == 'sql'" },
     { name = "uvicorn" },
 ]
-provides-extras = ["dev"]
+provides-extras = ["mongo", "redis", "sql", "all"]
 
 [[package]]
 name = "async-timeout"

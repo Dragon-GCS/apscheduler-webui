@@ -6,7 +6,7 @@ COPY . /app/
 
 RUN mkdir -p /app/logs
 
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir -e .[all]
 
 # Expose application port
 EXPOSE 8000
