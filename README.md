@@ -41,11 +41,10 @@
 
 1. 安装依赖
 
-    推荐使用[start](https://github.com/Dragon-GCS/start)
+    推荐使用[uv](https://hellowac.github.io/uv-zh-cn/getting-started/installation/)
 
     ```bash
-    start init  # 创建虚拟环境（可选）
-    start install
+    uv sync
     ```
 
     或者使用`pip`
@@ -58,6 +57,10 @@
 2. 启动服务
 
     ```bash
+    # use uv
+    uv run uvicorn main:app
+    # use python
+    source .venv/bin/activate # 如果有虚拟环境
     uvicron main:app
     ```
 

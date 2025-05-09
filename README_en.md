@@ -41,11 +41,10 @@ Clone the repository
 
 1. Install dependencies
 
-    Use [start](https://github.com/Dragon-GCS/start)(Recommended)
+    Use [uv](https://hellowac.github.io/uv-zh-cn/getting-started/installation/)
 
     ```bash
-    start init  # Create virtual environment(Optional)
-    start install
+    uv sync
     ```
 
     Or use `pip`
@@ -58,7 +57,11 @@ Clone the repository
 2. Start the server
 
     ```bash
-    uvicron main:app --port <port>
+    # use uv
+    uv run uvicorn main:app
+    # use python
+    source .venv/bin/activate # If have virtual environment
+    uvicron main:app
     ```
 
 ### Docker
