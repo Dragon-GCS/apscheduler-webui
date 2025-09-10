@@ -4,7 +4,7 @@
 
 [中文](README.md) | English
 
-**apscheduler-webui** is a lightweight task scheduling web service built upon [APScheduler](https://github.com/agronholm/apscheduler) and [FastUI](https://fastui.fastapi.tiangolo.com/), designed to provide a concise and intuitive interface for managing and monitoring scheduled tasks, while leveraging the powerful capabilities of `APScheduler` to execute background tasks in a flexible and efficient manner.
+**apscheduler-webui** is a lightweight task scheduling web service built upon [APScheduler](https://github.com/agronholm/apscheduler) and [FastUI](https://github.com/pydantic/FastUI), designed to provide a concise and intuitive interface for managing and monitoring scheduled tasks, while leveraging the powerful capabilities of `APScheduler` to execute background tasks in a flexible and efficient manner.
 
 ![screenshot](./pictures/screenshot.png)
 

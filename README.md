@@ -4,7 +4,7 @@
 
 中文 | [English](README_en.md)
 
-**apscheduler-webui** 是一个基于 [APScheduler](https://github.com/agronholm/apscheduler) 和 [FastUI](https://fastui.fastapi.tiangolo.com/) 构建的轻量级任务调度Web服务，旨在提供简洁直观的界面以管理和监控定时任务，同时利用 `APScheduler` 的强大功能实现灵活、高效的后台任务执行。
+**apscheduler-webui** 是一个基于 [APScheduler](https://github.com/agronholm/apscheduler) 和 [FastUI](https://github.com/pydantic/FastUI) 构建的轻量级任务调度Web服务，旨在提供简洁直观的界面以管理和监控定时任务，同时利用 `APScheduler` 的强大功能实现灵活、高效的后台任务执行。
 
 ![screenshot](./pictures/screenshot.png)
 
