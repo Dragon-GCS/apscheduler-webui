@@ -17,6 +17,7 @@
     - [Local Deployment](#local-deployment)
     - [Docker](#docker)
     - [Mange jobs](#mange-jobs)
+    - [UV Script Support](#uv-script-support)
     - [Manger Executor and JobStore](#manger-executor-and-jobstore)
     - [View logs](#view-logs)
   - [License](#license)
@@ -86,6 +87,14 @@ def your_func(...):
 
 - Use webui（`/new`），add new job with string: `your_module:your_func`
   > For manage jobs, you can put your jobs under some folder(e.g. `scripts`), and use `scripts.your_module:your_func` to add jobs.
+
+### UV Script Support
+
+If the `uv` command is available, you can run [uv scripts](https://docs.astral.sh/uv/guides/scripts/) by setting `func` to a special value `uv_run`. The script path is passed through the `uv_script` field, and the `args` and `kwargs` fields will be passed as positional and keyword arguments to the script.
+
+> The underlying logic can be understood as:
+> uv run {uv_script} {args0} {args1} ... --key1=value1 --key2=value2 ...
+
 
 ### Manger Executor and JobStore
 

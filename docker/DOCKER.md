@@ -4,7 +4,7 @@ This document provides instructions for deploying APScheduler WebUI using Docker
 
 ## Using docker run
 
-From pre-built image
+From pre-built image, this image contains all dependencies and built with uv base image.
 
 ```bash
 docker pull drag0nz/apscheduler-webui:latest
@@ -14,7 +14,7 @@ Or build by yourself
 
 ```bash
 # Execute in the project root directory
-docker build -t drag0nz/apscheduler-webui -f docker/Dockerfile .
+docker build -t apscheduler-webui -f docker/Dockerfile .
 ```
 
 If you want to change some config, export config file to current directory

@@ -1,3 +1,4 @@
+from genericpath import exists
 from importlib import import_module, reload
 from pathlib import Path
 from typing import Annotated, Literal
@@ -13,7 +14,8 @@ from fastui.forms import fastui_form
 from ..exceptions import InvalidAction
 from ..scheduler import scheduler
 from ..schema import JobInfo, ModifyJobParam, NewJobParam
-from ..shared import Components, confirm_modal, frame_page, h_stack, reload_event
+from ..shared import Components, confirm_modal, error, frame_page, h_stack, reload_event
+from ..uv import uv_available, uv_run
 
 router = APIRouter(prefix="/job", tags=["job"])
 
@@ -57,8 +59,16 @@ async def jobs() -> Components:
 @router.post("/", response_model=FastUI, response_model_exclude_none=True)
 async def new_job(job_info: Annotated[NewJobParam, fastui_form(NewJobParam)]) -> Components:
     trigger = job_info.get_trigger()
+    if (func := job_info.func) == "uv_run":
+        if not uv_available:
+            return [error("uv is not available. Please install it to use uv_run job.")]
+        if not (script := job_info.uv_script) or not Path(script).exists():
+            return [error(f"Script '{script}' is not exists")]
+        func = uv_run
+        job_info.args = (script, *job_info.args)
+
     job = scheduler.add_job(
-        job_info.func,
+        func,
         trigger=trigger,
         args=job_info.args,
         kwargs=job_info.kwargs,
@@ -82,7 +92,10 @@ async def job_detail(id: str) -> Components:
     if not job:
         return [c.FireEvent(event=GoToEvent(url="/"))]
     job_model = JobInfo.model_validate(job)
-    path = Path(*job.func.__module__.split(".")).with_suffix(".py")
+    if job.func is uv_run:
+        path = Path(job.args[0])
+    else:
+        path = Path(*job.func.__module__.split(".")).with_suffix(".py")
     return frame_page(
         c.Link(components=[c.Text(text="Back")], on_click=BackEvent()),
         c.Heading(text="Job Detail"),
@@ -138,7 +151,6 @@ async def modify_job(
     id: str, job_info: Annotated[ModifyJobParam, fastui_form(ModifyJobParam)]
 ) -> Components:
     modify_kwargs = job_info.model_dump(exclude={"trigger", "trigger_params"})
-    modify_kwargs["trigger"] = job_info.get_trigger()
     modify_kwargs = dict(filter(lambda x: x[1], modify_kwargs.items()))
     scheduler.modify_job(id, **modify_kwargs)
 
@@ -156,7 +168,7 @@ async def modify_job(
 async def pause_job(action: Literal["pause", "resume", "reload", "remove"], id: str) -> Components:
     job = scheduler.get_job(id)
     if not job:
-        return [c.Error(title="Error", description=f"Job({id=}) not found", status_code=500)]
+        return [error("Job not found", status_code=404)]
 
     match action:
         case "pause":
@@ -180,5 +192,5 @@ async def pause_job(action: Literal["pause", "resume", "reload", "remove"], id: 
 @router.get("/view/{path:path}", response_model=FastUI, response_model_exclude_none=True)
 def edit_job_script(path: Path) -> AnyComponent:
     if not path.exists():
-        return c.Error(title="Error", description=f"Module {path} not found", status_code=500)
+        return error(f"Module {path} not found", status_code=404)
     return c.Code(text=path.read_text(), language="python")

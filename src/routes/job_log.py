@@ -10,7 +10,7 @@ from pydantic import Field
 
 from ..config import LOG_PATH
 from ..log import PARSE_PATTERN, logger
-from ..shared import Components, frame_page
+from ..shared import Components, error, frame_page
 from .api import get_available_job_logs
 
 router = APIRouter(prefix="/job/log", tags=["job_log"])
@@ -73,7 +73,7 @@ async def get_log(
         log_file = "scheduler.log"
 
     if not (log_file and (LOG_PATH / log_file).exists()):
-        return [c.Error(title="File not found", description=f"Log file {log_file} not found.")]
+        return [error(title="File not found", description=f"Log file {log_file} not found.")]
 
     contents = get_log_content(log_file, level)
     return frame_page(

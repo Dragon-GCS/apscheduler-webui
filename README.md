@@ -17,6 +17,7 @@
     - [本地部署](#本地部署)
     - [Docker部署](#docker部署)
     - [任务管理](#任务管理)
+    - [UV Script支持](#uv-script支持)
     - [Executor、JobStore管理](#executorjobstore管理)
     - [日志查看](#日志查看)
   - [许可证](#许可证)
@@ -86,6 +87,13 @@ def your_func(...):
 
 - 使用webui（`/new`），通过字符串注册任务：`your_module:your_func`
   > 为了管理脚本，建议将脚本放在指定目录下（比如`scripts`）下并通过`scripts.your_module:your_func`注册任务
+
+### UV Script支持
+
+如果环境中`uv`命令可用，通过将`func`设置为`uv_run`可以运行[uv脚本](https://docs.astral.sh/uv/guides/scripts/)，脚本内容通过`uv_script`字段传递，`args`和`kwargs`字段将作为位置参数和关键字参数传递给脚本
+
+> 具体逻辑可以理解为：
+> uv run {uv_script} {args0} {args1} ... {--key1=value1} {--key2=value2} ...
 
 ### Executor、JobStore管理
 

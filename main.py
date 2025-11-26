@@ -31,7 +31,6 @@ app.include_router(api_router)
 
 @app.get("/{path:path}")
 def index(path: str) -> HTMLResponse:
-    print(f"{path=}")
     return HTMLResponse(prebuilt_html(api_root_url="/job"))
 
 

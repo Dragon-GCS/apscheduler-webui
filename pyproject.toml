@@ -4,14 +4,14 @@ requires = ['setuptools']
 
 [project]
 name = 'apscheduler-webui'
-version = '0.0.1'
+version = '0.1.0'
 requires-python = '>=3.10'
 dependencies = [
     'apscheduler',
     'fastapi',
-    'fastui',
+    'fastui>=0.9',
     'loguru',
-    "pydantic<2.10",
+    "pydantic>=2.12",
     'python-multipart',
     'uvicorn',
 ]
@@ -19,6 +19,11 @@ dependencies = [
 [[project.authors]]
 name = 'Dragon-GCS'
 email = '878173121@qq.com'
+
+[[tool.uv.index]]
+url = "https://mirrors.aliyun.com/pypi/simple"
+default = true
+
 
 [project.optional-dependencies]
 mongo = [ 'pymongo' ]

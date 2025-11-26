@@ -2,12 +2,9 @@
 import datetime
 import inspect
 import logging
-import os
 import re
 import sys
 from typing import TYPE_CHECKING
-
-os.environ.setdefault("LOGURU_AUTOINIT", "False")
 
 from loguru import logger
 
@@ -36,6 +33,7 @@ def filter_server_record(record: "Record") -> bool:
     return record["extra"] == {"server": True}
 
 
+logger.remove()
 logger.add(sys.stderr, format=LOG_FORMAT)
 logger.add(
     LOG_PATH / "scheduler.log",
@@ -60,6 +58,8 @@ server_log = logger.bind(server=True)
 class InterceptHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
         # Get corresponding Loguru level if it exists.
+        if not record.name.startswith("apscheduler."):
+            return  # Ignore non-apscheduler logs
         level: str | int
         try:
             level = logger.level(record.levelname).name

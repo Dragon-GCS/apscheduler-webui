@@ -13,12 +13,14 @@ from pydantic import BaseModel, Field, PlainSerializer, model_validator
 
 from .exceptions import InvalidExecutor, InvalidJobStore, InvalidTrigger
 from .scheduler import scheduler
+from .uv import uv_run
 
 if TYPE_CHECKING:
     from apscheduler.executors.base import BaseExecutor
     from apscheduler.jobstores.base import BaseJobStore
 
 AllTrigger: TypeAlias = CronTrigger | DateTrigger | IntervalTrigger
+TriggerType: TypeAlias = Literal["Cron", "Date", "Interval"]
 
 
 def format_date(date: datetime.datetime | datetime.date | None) -> str | None:
@@ -86,7 +88,7 @@ class TriggerParam(BaseModel):
         return trigger_param
 
     def get_trigger(
-        self, trigger: Literal["Cron", "Date", "Interval"], next_run_time: datetime.datetime | None
+        self, trigger: TriggerType, next_run_time: datetime.datetime | None
     ) -> AllTrigger:
         if trigger == "Cron":
             return CronTrigger(
@@ -126,6 +128,11 @@ class TriggerParam(BaseModel):
 
 
 class JobInfo(BaseModel):
+    """
+    Represents a serializable snapshot of an APScheduler job, capturing core metadata
+    and scheduler-specific configuration for UI presentation.
+    """
+
     id: Annotated[str, Field(title="ID")]
     name: Annotated[str, Field(title="Name")]
     next_run_time: Annotated[
@@ -139,10 +146,18 @@ class JobInfo(BaseModel):
         str,
         Field("default", title="Job Store", json_schema_extra={"search_url": "/api/job-stores"}),
     ]
-    trigger: Annotated[Literal["Cron", "Date", "Interval"], Field(title="Trigger")]
+    trigger: Annotated[TriggerType, Field(title="Trigger")]
     trigger_params: Annotated[TriggerParam, Field(title="Trigger Params")]
     func: Annotated[
-        str, Field(title="Function", description="String parsed by 'scheduler.add_job'.")
+        str,
+        Field(
+            title="Function",
+            description="String parsed by 'scheduler.add_job', pass 'uv_run' for running uv scripts.",
+        ),
+    ]
+    uv_script: Annotated[
+        str,
+        Field("", title="UV Scripts", description="Only available when func is 'uv_run'."),
     ]
     args: Annotated[
         str, Field(default="[]", title="Arguments", description="List with json format")
@@ -166,8 +181,15 @@ class JobInfo(BaseModel):
         job_store_class = scheduler._jobstores[job_store].__class__
         data["jobstore"] = f"{job_store_class.__name__}({job_store})"
 
-        data["func"] = f"{job.func.__module__}.{job.func.__qualname__}"
-        data["args"] = json.dumps(job.args)
+        # Special handling for uv_run function
+        if job.func is uv_run:
+            data["func"] = "uv_run"
+            data["uv_script"] = job.args[0]
+            data["args"] = json.dumps(job.args[1:])
+        else:
+            data["func"] = f"{job.func.__module__}.{job.func.__qualname__}"
+            data["args"] = json.dumps(job.args)
+
         data["kwargs"] = json.dumps(job.kwargs)
         data["trigger"] = job.trigger.__class__.__name__.removesuffix("Trigger")
         data["trigger_params"] = job.trigger
@@ -175,9 +197,14 @@ class JobInfo(BaseModel):
 
 
 class ModifyJobParam(BaseModel):
+    """
+    Data model for modifying APScheduler jobs, providing parsed trigger configuration,
+    runtime arguments, and scheduling safeguards before invoking job updates.
+    """
+
     name: Annotated[str, Field(title="Name")]
     next_run_time: Annotated[datetime.datetime | None, Field(None, title="Next Run")]
-    trigger: Annotated[Literal["Cron", "Date", "Interval"], Field(title="Trigger")]
+    trigger: Annotated[TriggerType, Field(title="Trigger")]
     trigger_params: Annotated[TriggerParam, Field(title="Trigger Params")]
     args: Annotated[tuple, Field((), title="Arguments", description="List with json format")]
     kwargs: Annotated[
@@ -204,6 +231,10 @@ class ModifyJobParam(BaseModel):
 
 
 class NewJobParam(ModifyJobParam, JobInfo):  # type: ignore
+    """Parameters inherited from ModifyJobParam and JobInfo for defining a newly scheduled job.
+    Field priority of ModifyJobParam is higher than JobInfo.
+    """
+
     pass
 
 

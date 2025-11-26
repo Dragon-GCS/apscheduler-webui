@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM ghcr.io/astral-sh/uv:python3.10-trixie-slim
 
 WORKDIR /app
 
@@ -6,7 +6,7 @@ COPY . /app/
 
 RUN mkdir -p /app/logs
 
-RUN pip install --no-cache-dir -e .[all]
+RUN uv sync --all-extras
 
 # Expose application port
 EXPOSE 8000

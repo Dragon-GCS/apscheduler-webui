@@ -93,3 +93,11 @@ def h_stack(*component: AnyComponent, class_name: str = "") -> c.Div:
         components=list(component),
         class_name=f"d-flex justify-content-center {class_name}",
     )
+
+
+def error(description: str, title: str = "Error", status_code: int = 500) -> c.Error:
+    return c.Error(
+        title=title,
+        description=description,
+        status_code=status_code,
+    )
