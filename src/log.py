@@ -2,24 +2,23 @@
 import datetime
 import inspect
 import logging
+import os
 import re
-import sys
 from typing import TYPE_CHECKING
-
-from loguru import logger
-
-from .config import LOG_PATH
-
-if TYPE_CHECKING:
-    from loguru import Record
-
 
 LOG_FORMAT = (
     "<green>[{process: >5}] {time:YYYY-MM-DD HH:mm:ss}</green> | "
     "<level>{level: <8}</level> | "
     "<cyan>{name}:{line}</cyan>\t{message}"
 )
+os.environ["LOGURU_FORMAT"] = LOG_FORMAT
 
+from loguru import logger as server_log
+
+from .config import LOG_PATH
+
+if TYPE_CHECKING:
+    from loguru import Record
 
 PARSE_PATTERN = re.compile(
     r"\[\s*(?P<pid>\d+)\] (?P<time>[\d\s:-]+) \| "
@@ -30,28 +29,27 @@ PARSE_PATTERN = re.compile(
 
 
 def filter_server_record(record: "Record") -> bool:
-    return record["extra"] == {"server": True}
+    """Filter apscheduler and WebUI logs."""
+
+    return bool(record["name"] and record["name"].startswith(("apscheduler.", "src.")))
 
 
-logger.remove()
-logger.add(sys.stderr, format=LOG_FORMAT)
-logger.add(
+server_log.add(
+    # Log file for WebUI and apscheduler
     LOG_PATH / "scheduler.log",
-    format=LOG_FORMAT,
-    diagnose=False,
-    enqueue=True,
-    filter="apscheduler",
-)
-logger.add(
-    LOG_PATH / "jobs.{time:YYYY-MM-DD}.log",
-    format=LOG_FORMAT,
     diagnose=False,
     enqueue=True,
     filter=filter_server_record,
+    rotation="100 MB",
+)
+server_log.add(
+    # Log file for jobs (rotated daily)
+    LOG_PATH / "jobs.{time:YYYY-MM-DD}.log",
+    diagnose=False,
+    enqueue=True,
+    filter=lambda record: not filter_server_record(record),
     rotation=datetime.time(0, 0),
 )
-
-server_log = logger.bind(server=True)
 
 
 # Intercept standard logging messages to use Loguru
@@ -62,7 +60,7 @@ class InterceptHandler(logging.Handler):
             return  # Ignore non-apscheduler logs
         level: str | int
         try:
-            level = logger.level(record.levelname).name
+            level = server_log.level(record.levelname).name
         except ValueError:
             level = record.levelno
 
@@ -72,7 +70,7 @@ class InterceptHandler(logging.Handler):
             frame = frame.f_back
             depth += 1
 
-        logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
+        server_log.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
 
 
 logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)

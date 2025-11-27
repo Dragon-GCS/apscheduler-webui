@@ -1,13 +1,14 @@
 from asyncio.subprocess import PIPE, create_subprocess_exec
 from subprocess import call
 
+from .config import ROOT
 from .log import server_log
 
 
 async def uv_run(uv_scripts: str, *args: str, **kwargs: str):
     args = (*args, *(f"--{k}={v}" for k, v in kwargs.items()))
     process = await create_subprocess_exec(
-        "uv", "run", uv_scripts, *map(str, args), stdout=PIPE, stderr=PIPE
+        "uv", "run", uv_scripts, *map(str, args), stdout=PIPE, stderr=PIPE, cwd=ROOT
     )
     stdout, stderr = await process.communicate()
     if stdout:

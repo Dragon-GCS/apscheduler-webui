@@ -187,7 +187,7 @@ class JobInfo(BaseModel):
             data["uv_script"] = job.args[0]
             data["args"] = json.dumps(job.args[1:])
         else:
-            data["func"] = f"{job.func.__module__}.{job.func.__qualname__}"
+            data["func"] = f"{job.func.__module__}:{job.func.__qualname__}"
             data["args"] = json.dumps(job.args)
 
         data["kwargs"] = json.dumps(job.kwargs)
@@ -275,7 +275,7 @@ class JobStoreInfo(BaseModel):
             database = collection._Collection__database
             client = database.client
             try:
-                from pymongo.errors import InvalidOperation
+                from pymongo.errors import InvalidOperation  # type: ignore
 
                 _Exception = InvalidOperation
             except ImportError:

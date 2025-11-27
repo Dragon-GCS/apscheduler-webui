@@ -1,16 +1,16 @@
-# apscheduler-webui
+# APScheduler-WebUI
 
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![Python Version](https://img.shields.io/badge/Python-3.10%2B-green.svg)](https://www.python.org/downloads/release/python-380/) [![FastUI Version](https://img.shields.io/badge/FastUI-orange.svg)](https://fastui.fastapi.tiangolo.com/) [![Apscheduler](https://img.shields.io/badge/APScheduler-3.x-blue.svg)](https://github.com/agronholm/apscheduler)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) [![Python Version](https://img.shields.io/badge/Python-3.10%2B-green.svg)](https://www.python.org/downloads/release/python-380/) [![FastUI Version](https://img.shields.io/badge/FastUI-orange.svg)](https://fastui.fastapi.tiangolo.com/) [![APScheduler](https://img.shields.io/badge/APScheduler-3.x-blue.svg)](https://github.com/agronholm/apscheduler)
 
 [中文](README.md) | English
 
-**apscheduler-webui** is a lightweight task scheduling web service built upon [APScheduler](https://github.com/agronholm/apscheduler) and [FastUI](https://github.com/pydantic/FastUI), designed to provide a concise and intuitive interface for managing and monitoring scheduled tasks, while leveraging the powerful capabilities of `APScheduler` to execute background tasks in a flexible and efficient manner.
+**APScheduler-WebUI** is a lightweight task scheduling web service built upon [APScheduler](https://github.com/agronholm/apscheduler) and [FastUI](https://github.com/pydantic/FastUI), designed to provide a concise and intuitive interface for managing and monitoring scheduled tasks, while leveraging the powerful capabilities of `APScheduler` to execute background tasks in a flexible and efficient manner.
 
 ![screenshot](./pictures/screenshot.png)
 
 ## Table of Contents
 
-- [apscheduler-webui](#apscheduler-webui)
+- [APScheduler-WebUI](#apscheduler-webui)
   - [Table of Contents](#table-of-contents)
   - [Features](#features)
   - [Quick Start](#quick-start)
@@ -19,7 +19,7 @@
     - [Mange jobs](#mange-jobs)
     - [UV Script Support](#uv-script-support)
     - [Manger Executor and JobStore](#manger-executor-and-jobstore)
-    - [View logs](#view-logs)
+    - [Log Management](#log-management)
   - [License](#license)
 
 ## Features
@@ -85,36 +85,57 @@ def your_func(...):
     ...
 ```
 
-- Use webui（`/new`），add new job with string: `your_module:your_func`
+- Use WebUI（`/new`），add new job with string: `your_module:your_func`
   > For manage jobs, you can put your jobs under some folder(e.g. `scripts`), and use `scripts.your_module:your_func` to add jobs.
+
+![job-detail](./pictures/job-detail.png)
 
 ### UV Script Support
 
 If the `uv` command is available, you can run [uv scripts](https://docs.astral.sh/uv/guides/scripts/) by setting `func` to a special value `uv_run`. The script path is passed through the `uv_script` field, and the `args` and `kwargs` fields will be passed as positional and keyword arguments to the script.
 
-> The underlying logic can be understood as:
-> uv run {uv_script} {args0} {args1} ... --key1=value1 --key2=value2 ...
-
+> [!NOTE]
+> The `uv_run` function calls the `uv run` command via `subprocess` to execute the script, passing parameters to it:
+> `uv run {uv_script} {args0} {args1} ... {--key1=value1} {--key2=value2} ...`
 
 ### Manger Executor and JobStore
 
-- Config in`src/config.py`
+- Configure in `src/config.py`
+- Manage through WebUI (`/store`, `/executor`) (will be reset on each service restart)
 
-  ```python
-  SCHEDULER_CONFIG = {
-    "executors": {"default": AsyncIOExecutor()},
-    "jobstores": {},
-  }
-  ```
+### Log Management
 
-- Use webui(`/store`, `/executor`)
-  > Not recommended because it will be reset when you restart the server
+![log-view](./pictures/log-view.png)
 
-### View logs
+- WebUI (`/log/jobs`) can parse and view log files recorded in a specific format. Logs are divided into two categories:
+  - `scheduler` logs: Record log information output by the scheduler
+  - Job logs: Record output log information for each job
+- WebUI uses [Loguru](https://github.com/Delgan/loguru) to record and manage logs, and modifies the default log format for easy parsing, so scripts can directly use logs via `from loguru import logger`
+  > WebUI modifies the default format of `loguru` by setting the `LOGURU_FORMAT` environment variable, and adds a sink in `src/log.py` to output script logs to the corresponding date file.
+- Logs are saved in the `logs/` directory (configurable in `config.py`), where `scheduler.*log` stores `scheduler` logs, and `job.YYYY-MM-DD.log` stores script output logs.
 
-- You can use `loguru.logger` to record logs, but must set format with `src.log.LOG_FORMAT`。
-- Use `src.log.server_log` without any config, log will save to `logs` folder with format can be parsed correctly.
-- Webui(`/log/jobs`) can check your logs which is start with `jobs` and saved in specified folder (default is `logs`, can be changed in `config.py`)
+> [!IMPORTANT]
+> For uv scripts, `subprocess` inherits environment variables, so no log format needs to be specified. However, if you want to view your script's logs in WebUI, you MUST add a sink manually and there are two methods:
+>
+> 1. Use the server_log provided by WebUI to record logs
+>
+>    ```python
+>    # The script's working directory is the project root directory, so you can directly import the src module
+>    from src.log import server_log as logger
+>    logger.info("This is a log message")
+>    ```
+>
+> 2. Manually add a sink in the script to record logs to a file
+>
+>    ```python
+>    from loguru import logger
+>    from src.config import LOG_PATH
+> 
+>    server_log.add(
+>      LOG_PATH / "jobs.{time:YYYY-MM-DD}.log", # Filename can be customized
+>      rotation=datetime.time(0, 0),  # If the filename contains {time}, it can be rotated daily
+>    )
+>    ```
 
 ## License
 
